@@ -26,15 +26,15 @@ static unsigned long mtimer_ptr_offset;
 	sbi_scratch_write_type((__scratch), void *, mtimer_ptr_offset, (__mtimer))
 
 #if __riscv_xlen != 32
-static u64 mtimer_time_rd64(volatile u64 *addr)
-{
-	return readq_relaxed(addr);
-}
-
-static void mtimer_time_wr64(bool timecmp, u64 value, volatile u64 *addr)
-{
-	writeq_relaxed(value, addr);
-}
+//static u64 mtimer_time_rd64(volatile u64 *addr)
+//{
+//	return readq_relaxed(addr);
+//}
+//
+//static void mtimer_time_wr64(bool timecmp, u64 value, volatile u64 *addr)
+//{
+//	writeq_relaxed(value, addr);
+//}
 #endif
 
 static u64 mtimer_time_rd32(volatile u64 *addr)
@@ -210,10 +210,10 @@ int aclint_mtimer_cold_init(struct aclint_mtimer_data *mt,
 
 	/* Override read/write accessors for 64bit MMIO */
 #if __riscv_xlen != 32
-	if (mt->has_64bit_mmio) {
-		mt->time_rd = mtimer_time_rd64;
-		mt->time_wr = mtimer_time_wr64;
-	}
+//	if (mt->has_64bit_mmio) {
+//		mt->time_rd = mtimer_time_rd64;
+//		mt->time_wr = mtimer_time_wr64;
+//	}
 #endif
 
 	/* Update MTIMER pointer in scratch space */
