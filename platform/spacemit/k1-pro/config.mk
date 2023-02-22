@@ -40,7 +40,7 @@ platform-runcmd = qemu-system-riscv$(PLATFORM_RISCV_XLEN) -M virt -m 256M \
   -bios $(build_dir)/platform/spacemit/k1-pro/firmware/fw_jump.elf
 
 # Firmware load address configuration. This is mandatory.
-FW_TEXT_START=0x20000000
+FW_TEXT_START=0x40020000
 
 # Optional parameter for path to external FDT
 # FW_FDT_PATH="path to platform flattened device tree file"
@@ -63,9 +63,9 @@ FW_JUMP=y
 # ifeq ($(PLATFORM_RISCV_XLEN), 32)
 # FW_JUMP_ADDR=0x80400000
 # else
-FW_JUMP_ADDR=0x20200000
+FW_JUMP_ADDR=0x40200000
 # endif
-FW_JUMP_FDT_ADDR=0x23E00000
+FW_JUMP_FDT_ADDR=0x4FF00000
 
 #
 # Firmware with payload configuration.

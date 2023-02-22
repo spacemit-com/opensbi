@@ -18,6 +18,7 @@
 #include <sbi_utils/irqchip/plic.h>
 #include <sbi_utils/serial/uart8250.h>
 #include <sbi_utils/timer/aclint_mtimer.h>
+#include <sbi_utils/serial/fdt_serial.h>
 
 #include "platform.h"
 #include <libfdt.h>
@@ -152,20 +153,6 @@ static int platform_final_init(bool cold_boot)
 }
 
 /*
- * Initialize the platform console.
- */
-static int platform_console_init(void)
-{
-    /* Example if the generic UART8250 driver is used */
-    if (qemu_mode) {
-        return uart8250_init(PLATFORM_UART_ADDR, PLATFORM_UART_INPUT_FREQ,
-                PLATFORM_UART_BAUDRATE, 0, 1, 0);
-    }
-    else
-        return suart_serial_init();
-}
-
-/*
  * Initialize the platform interrupt controller for current HART.
  */
 static int platform_irqchip_init(bool cold_boot)
@@ -217,7 +204,7 @@ static int platform_timer_init(bool cold_boot)
 const struct sbi_platform_operations platform_ops = {
     .early_init     = platform_early_init,
     .final_init     = platform_final_init,
-    .console_init   = platform_console_init,
+    .console_init   = fdt_serial_init,
     .irqchip_init   = platform_irqchip_init,
     .ipi_init       = platform_ipi_init,
     .timer_init     = platform_timer_init
