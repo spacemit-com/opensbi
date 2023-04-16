@@ -37,10 +37,10 @@ platform-ldflags-y =
 # Command for platform specific "make run"
 platform-runcmd = qemu-system-riscv$(PLATFORM_RISCV_XLEN) -M virt -m 256M \
   -nographic \
-  -bios $(build_dir)/platform/spacemit/k1-pro/firmware/fw_jump.elf
+  -bios $(build_dir)/platform/spacemit/k1-pro/firmware/fw_dynamic.elf
 
 # Firmware load address configuration. This is mandatory.
-FW_TEXT_START=0x40020000
+FW_TEXT_START=0x40000000
 
 # Optional parameter for path to external FDT
 # FW_FDT_PATH="path to platform flattened device tree file"
@@ -50,14 +50,14 @@ FW_TEXT_START=0x40020000
 # Optional parameters are commented out. Uncomment and define these parameters
 # as needed.
 #
-FW_DYNAMIC=<y|n>
+FW_DYNAMIC=y
 
 #
 # Jump firmware configuration.
 # Optional parameters are commented out. Uncomment and define these parameters
 # as needed.
 #
-FW_JUMP=y
+FW_JUMP=<y|n>
 # This needs to be 4MB aligned for 32-bit support
 # This needs to be 2MB aligned for 64-bit support
 # ifeq ($(PLATFORM_RISCV_XLEN), 32)
