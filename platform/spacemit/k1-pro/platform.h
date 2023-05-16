@@ -7,15 +7,6 @@
 #ifndef _C910_PLATFORM_H_
 #define _C910_PLATFORM_H_
 
-#define C910_HART_COUNT   16
-#define C910_HART_STACK_SIZE   8192
-
-#define SBI_THEAD_FEATURES  \
-    (SBI_PLATFORM_HAS_PMP | \
-     SBI_PLATFORM_HAS_SCOUNTEREN | \
-     SBI_PLATFORM_HAS_MCOUNTEREN | \
-     SBI_PLATFORM_HAS_MFAULTS_DELEGATION)
-
 #define CSR_MCOR         0x7c2
 #define CSR_MHCR         0x7c1
 #define CSR_MCCR2        0x7c3
@@ -25,11 +16,22 @@
 #define CSR_MRMR         0x7c6
 #define CSR_MRVBR        0x7c7
 
-#define SBI_EXT_VENDOR_C910_BOOT_OTHER_CORE    0x09000003
+#define PLATFORM_CCI_ADDR           (0x0FE00000)
 
-#define C910_PLIC_CLINT_OFFSET     0x04000000  /* 64M */
-#define C910_PLIC_DELEG_OFFSET     0x001ffffc
-#define C910_PLIC_DELEG_ENABLE     0x1
+#define C910_PLIC_CLINT_OFFSET      0x04000000  /* 64M */
+#define C910_PLIC_DELEG_OFFSET      0x001ffffc
+#define C910_PLIC_DELEG_ENABLE      0x1
+
+#define CLUSTER_ID_BITSHIFT         (2)
+#define CLUSTER_ID_MASK             (0x0f << CLUSTER_ID_BITSHIFT)
+#define CORE_ID_BITSHIFT            (0)
+#define CORE_ID_MASK                (((1 << CLUSTER_ID_BITSHIFT) - 1) << CORE_ID_BITSHIFT)
+
+#define PLAT_CCI_CLUSTER0_IFACE_IX  0
+#define PLAT_CCI_CLUSTER1_IFACE_IX  1
+#define PLAT_CCI_CLUSTER2_IFACE_IX  2
+#define PLAT_CCI_CLUSTER3_IFACE_IX  3
+
 
 struct c910_regs_struct {
     u64 pmpaddr0;

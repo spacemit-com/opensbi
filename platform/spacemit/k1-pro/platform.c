@@ -8,12 +8,15 @@
 #include <sbi/riscv_encoding.h>
 #include <sbi/riscv_io.h>
 #include <sbi/sbi_const.h>
+#include <sbi/sbi_hart.h>
+#include <sbi/sbi_hartmask.h>
 #include <sbi/sbi_platform.h>
 
 /*
  * Include these files as needed.
  * See objects.mk PLATFORM_xxx configuration parameters.
  */
+#include <sbi_utils/cci/cci.h>
 #include <sbi_utils/fdt/fdt_helper.h>
 #include <sbi_utils/ipi/aclint_mswi.h>
 #include <sbi_utils/irqchip/plic.h>
@@ -34,7 +37,7 @@
 #define PLATFORM_ACLINT_MTIMER_ADDR (PLATFORM_CLINT_ADDR + \
                                      CLINT_MTIMER_OFFSET)
 
-int qemu_mode;
+extern struct sbi_platform platform;
 
 static struct plic_data plic = {
     .addr = PLATFORM_PLIC_ADDR,
@@ -45,7 +48,7 @@ static struct aclint_mswi_data mswi = {
     .addr = PLATFORM_ACLINT_MSWI_ADDR,
     .size = ACLINT_MSWI_SIZE,
     .first_hartid = 0,
-    .hart_count = PLATFORM_HART_COUNT,
+    .hart_count = SBI_HARTMASK_MAX_BITS,
 };
 
 static struct aclint_mtimer_data mtimer = {
@@ -57,9 +60,35 @@ static struct aclint_mtimer_data mtimer = {
                      ACLINT_DEFAULT_MTIMECMP_OFFSET,
     .mtimecmp_size = ACLINT_DEFAULT_MTIMECMP_SIZE,
     .first_hartid = 0,
-    .hart_count = PLATFORM_HART_COUNT,
+    .hart_count = SBI_HARTMASK_MAX_BITS,
     .has_64bit_mmio = TRUE,
 };
+
+static const int cci_map[] = {
+    PLAT_CCI_CLUSTER0_IFACE_IX,
+    PLAT_CCI_CLUSTER1_IFACE_IX,
+    PLAT_CCI_CLUSTER2_IFACE_IX,
+    PLAT_CCI_CLUSTER3_IFACE_IX,
+};
+
+static struct c910_regs_struct c910_regs;
+static u32 generic_hart_index2id[SBI_HARTMASK_MAX_BITS] = {0};
+static int qemu_mode;
+
+u32 platform_hart_index(u32 hartid)
+{
+    u32 i;
+
+    if (platform.hart_index2id) {
+        for (i = 0; i < platform.hart_count; i++) {
+            if (platform.hart_index2id[i] == hartid)
+                return i;
+        }
+        return -1U;
+    }
+
+    return hartid;
+}
 
 unsigned long fw_platform_init(unsigned long arg0, unsigned long arg1,
                                unsigned long arg2, unsigned long arg3,
@@ -67,17 +96,16 @@ unsigned long fw_platform_init(unsigned long arg0, unsigned long arg1,
 {
     const char *compatible;
     void *fdt = (void *)arg1;
-    int root_offset, len;
+    u32 hartid, hart_count = 0, clusterid, cluster_enabled = 0;
+    int rc, root_offset, cpus_offset, cpu_offset, len;
     struct plic_data plic_data;
     unsigned long aclint_freq;
     uint64_t clint_addr;
-    int rc;
 
     root_offset = fdt_path_offset(fdt, "/");
     if (root_offset >= 0) {
         compatible = fdt_getprop(fdt, root_offset, "compatible", &len);
-        if (compatible &&
-            (0 == sbi_strncmp(compatible, "riscv-virtio", 12)))
+        if (compatible && (0 == sbi_strncmp(compatible, "riscv-virtio", 12)))
             qemu_mode = 1;
     }
 
@@ -97,6 +125,42 @@ unsigned long fw_platform_init(unsigned long arg0, unsigned long arg1,
         mtimer.mtimecmp_addr = clint_addr + CLINT_MTIMER_OFFSET +
                                ACLINT_DEFAULT_MTIMECMP_OFFSET;
     }
+
+    cpus_offset = fdt_path_offset(fdt, "/cpus");
+    if (cpus_offset < 0)
+        sbi_hart_hang();
+
+    /* initiate cci */
+    cci_init(PLATFORM_CCI_ADDR, cci_map, array_size(cci_map));
+
+    fdt_for_each_subnode(cpu_offset, fdt, cpus_offset)
+    {
+        rc = fdt_parse_hart_id(fdt, cpu_offset, &hartid);
+        if (rc)
+            continue;
+
+        if (SBI_HARTMASK_MAX_BITS <= hartid)
+            continue;
+
+        if (!fdt_node_is_enabled(fdt, cpu_offset))
+            continue;
+
+        generic_hart_index2id[hart_count++] = hartid;
+
+        clusterid = (hartid & CLUSTER_ID_MASK) >> CLUSTER_ID_BITSHIFT;
+        if (!qemu_mode && (0 == (cluster_enabled & (1 << clusterid)))) {
+            /* enable cci for current cluster */
+            cci_enable_snoop_dvm_reqs(clusterid);
+            cluster_enabled |= 1 << clusterid;
+        }
+    }
+
+    platform.hart_count = hart_count;
+    mswi.hart_count = hartid + 1;
+    mtimer.hart_count = hartid + 1;
+
+    // mswi.hart2index = platform_hart_index;
+    // mtimer.hart2index = platform_hart_index;
 
     /* Return original FDT pointer */
     return arg1;
@@ -201,15 +265,14 @@ const struct sbi_platform_operations platform_ops = {
     .console_init = fdt_serial_init,
     .irqchip_init = platform_irqchip_init,
     .ipi_init = platform_ipi_init,
-    .timer_init = platform_timer_init
-};
+    .timer_init = platform_timer_init};
 
-const struct sbi_platform platform = {
+struct sbi_platform platform = {
     .opensbi_version = OPENSBI_VERSION,
     .platform_version = SBI_PLATFORM_VERSION(0x0, 0x01),
     .name = "k1-pro",
     .features = SBI_PLATFORM_DEFAULT_FEATURES,
-    .hart_count = PLATFORM_HART_COUNT,
+    .hart_count = SBI_HARTMASK_MAX_BITS,
+    .hart_index2id = generic_hart_index2id,
     .hart_stack_size = SBI_PLATFORM_DEFAULT_HART_STACK_SIZE,
-    .platform_ops_addr = (unsigned long)&platform_ops
-};
+    .platform_ops_addr = (unsigned long)&platform_ops};
