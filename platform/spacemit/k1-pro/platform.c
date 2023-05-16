@@ -168,22 +168,62 @@ unsigned long fw_platform_init(unsigned long arg0, unsigned long arg1,
 
 static struct c910_regs_struct c910_regs;
 
+static void cache_enable(void)
+{
+    // change DDR delay counter
+    // write32(0x1001200C, 200);
+    /* disable theadisaee and MAEE */
+    csr_clear(CSR_MXSTATUS, 1 << 22 | 1 << 21);
+    // invalid all memory for IBP,BTB,BHT,DCACHE,ICACHE
+    // csr_set(CSR_MCOR, 0x70013);
+    // enable lbuf,way_pred,data_cache_prefetch,amr
+    csr_set(CSR_MHCR, 0x11ff);
+    // csr_set(CSR_MHINT, 0x6e30c);
+    // enable l2cache TLB prefetch
+    csr_set(CSR_MCCR2, 0xe0000009);
+}
+
+static void wakeup_other_core(void)
+{
+    int i;
+    u32 hartid, clusterid, coreid;
+    u32 *cpu_reset_reg;
+
+    // hart0 is already boot up
+    for (i = 1; i < platform.hart_count; i++) {
+        hartid = generic_hart_index2id[i];
+
+        // cluster0 had release reset
+        clusterid = (hartid & CLUSTER_ID_MASK) >> CLUSTER_ID_BITSHIFT;
+        coreid = (hartid & CORE_ID_MASK) >> CORE_ID_BITSHIFT;
+
+        cpu_reset_reg = (u32 *)CPU_RESET_BASE_ADDR + clusterid;
+        if ((clusterid > 0) && (0x0F != (readl(cpu_reset_reg) & 0x0F))) {
+            // de-assert cluster 1 APB, L2C, PIC, ACEM/LLP
+            writel(0x0F, cpu_reset_reg);
+        }
+
+        writel(readl(cpu_reset_reg) | 1 << (coreid + 4), cpu_reset_reg);
+    }
+}
+
 static int c910_early_init(bool cold_boot)
 {
     if (cold_boot) {
         if (!qemu_mode) {
+            cache_enable();
+
             c910_regs.mcor = csr_read(CSR_MCOR);
             c910_regs.mhcr = csr_read(CSR_MHCR);
             c910_regs.mccr2 = csr_read(CSR_MCCR2);
             c910_regs.mhint = csr_read(CSR_MHINT);
             c910_regs.mxstatus = csr_read(CSR_MXSTATUS);
+
+            wakeup_other_core();
         }
     } else {
         if (!qemu_mode) {
-            csr_write(CSR_MCOR, c910_regs.mcor);
-            csr_write(CSR_MHCR, c910_regs.mhcr);
-            csr_write(CSR_MHINT, c910_regs.mhint);
-            csr_write(CSR_MXSTATUS, c910_regs.mxstatus);
+            cache_enable();
         }
     }
 

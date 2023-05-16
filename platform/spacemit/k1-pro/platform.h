@@ -17,6 +17,7 @@
 #define CSR_MRVBR        0x7c7
 
 #define PLATFORM_CCI_ADDR           (0x0FE00000)
+#define CPU_RESET_BASE_ADDR         (0x2F024000)
 
 #define C910_PLIC_CLINT_OFFSET      0x04000000  /* 64M */
 #define C910_PLIC_DELEG_OFFSET      0x001ffffc
