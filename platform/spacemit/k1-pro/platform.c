@@ -18,6 +18,7 @@
  */
 #include <sbi_utils/cci/cci.h>
 #include <sbi_utils/fdt/fdt_helper.h>
+#include <sbi_utils/fdt/fdt_pmu.h>
 #include <sbi_utils/ipi/aclint_mswi.h>
 #include <sbi_utils/irqchip/plic.h>
 #include <sbi_utils/serial/fdt_serial.h>
@@ -297,6 +298,38 @@ static int platform_timer_init(bool cold_boot)
 }
 
 /*
+ * Initialize hw performance counters.
+ */
+static int platform_pmu_init(void)
+{
+    return fdt_pmu_setup(fdt_get_address());
+}
+
+/*
+ * Get platform specific mhpmevent value.
+ */
+static uint64_t platform_pmu_xlate_to_mhpmevent(uint32_t event_idx, uint64_t data)
+{
+    uint64_t evt_val = 0;
+
+    /* 'data' is valid only for raw events and is equal to event selector */
+    if (event_idx == SBI_PMU_EVENT_RAW_IDX) {
+        evt_val = data;
+    } else {
+        /*
+         * Follows the SBI specification recommendation
+         * i.e. zero extended event_idx is used as mhpmevent value for
+         * hardware general/cache events if platform does't define one.
+         */
+        evt_val = fdt_pmu_get_select_value(event_idx);
+        if (!evt_val)
+            evt_val = (uint64_t)event_idx;
+    }
+
+    return evt_val;
+}
+
+/*
  * Platform descriptor.
  */
 const struct sbi_platform_operations platform_ops = {
@@ -305,7 +338,10 @@ const struct sbi_platform_operations platform_ops = {
     .console_init = fdt_serial_init,
     .irqchip_init = platform_irqchip_init,
     .ipi_init = platform_ipi_init,
-    .timer_init = platform_timer_init};
+    .timer_init = platform_timer_init,
+    .pmu_init = platform_pmu_init,
+    .pmu_xlate_to_mhpmevent = platform_pmu_xlate_to_mhpmevent,
+};
 
 struct sbi_platform platform = {
     .opensbi_version = OPENSBI_VERSION,
@@ -315,4 +351,5 @@ struct sbi_platform platform = {
     .hart_count = SBI_HARTMASK_MAX_BITS,
     .hart_index2id = generic_hart_index2id,
     .hart_stack_size = SBI_PLATFORM_DEFAULT_HART_STACK_SIZE,
-    .platform_ops_addr = (unsigned long)&platform_ops};
+    .platform_ops_addr = (unsigned long)&platform_ops
+};
