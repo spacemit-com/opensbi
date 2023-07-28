@@ -25,6 +25,8 @@
 #include <sbi_utils/serial/uart8250.h>
 #include <sbi_utils/timer/aclint_mtimer.h>
 
+#include <sbi_utils/psci/psci_lib.h>
+
 #include "platform.h"
 #include <libfdt.h>
 
@@ -248,6 +250,10 @@ static int platform_early_init(bool cold_boot)
  */
 static int platform_final_init(bool cold_boot)
 {
+    /* for clod boot, we build the cpu topology structure */
+    if (cold_boot)
+	    return psci_setup();
+
     return 0;
 }
 
