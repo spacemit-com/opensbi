@@ -99,7 +99,7 @@ unsigned long fw_platform_init(unsigned long arg0, unsigned long arg1,
 {
     const char *compatible;
     void *fdt = (void *)arg1;
-    u32 hartid, hart_count = 0, clusterid, cluster_enabled = 0;
+    u32 hartid, hart_count = 0;
     int rc, root_offset, cpus_offset, cpu_offset, len;
     struct plic_data plic_data;
     unsigned long aclint_freq;
@@ -136,8 +136,7 @@ unsigned long fw_platform_init(unsigned long arg0, unsigned long arg1,
     /* initiate cci */
     cci_init(PLATFORM_CCI_ADDR, cci_map, array_size(cci_map));
 
-    fdt_for_each_subnode(cpu_offset, fdt, cpus_offset)
-    {
+    fdt_for_each_subnode(cpu_offset, fdt, cpus_offset) {
         rc = fdt_parse_hart_id(fdt, cpu_offset, &hartid);
         if (rc)
             continue;
@@ -149,13 +148,6 @@ unsigned long fw_platform_init(unsigned long arg0, unsigned long arg1,
             continue;
 
         generic_hart_index2id[hart_count++] = hartid;
-
-        clusterid = (hartid & CLUSTER_ID_MASK) >> CLUSTER_ID_BITSHIFT;
-        if (!qemu_mode && (0 == (cluster_enabled & (1 << clusterid)))) {
-            /* enable cci for current cluster */
-            cci_enable_snoop_dvm_reqs(clusterid);
-            cluster_enabled |= 1 << clusterid;
-        }
     }
 
     platform.hart_count = hart_count;
@@ -171,25 +163,24 @@ unsigned long fw_platform_init(unsigned long arg0, unsigned long arg1,
 
 static struct c910_regs_struct c910_regs;
 
+void raise_soc_performance(void)
+{
+    csr_write(CSR_MHCR, 0x10011ff);
+    csr_write(CSR_MHINT, 0x6e30c);
+}
+
 static void cache_enable(void)
 {
-    // change DDR delay counter
-    // write32(0x1001200C, 200);
-    /* disable theadisaee and MAEE */
-    csr_clear(CSR_MXSTATUS, 1 << 22 | 1 << 21);
-    // invalid all memory for IBP,BTB,BHT,DCACHE,ICACHE
-    // csr_set(CSR_MCOR, 0x70013);
-    // enable lbuf,way_pred,data_cache_prefetch,amr
-    csr_set(CSR_MHCR, 0x11ff);
-    // csr_set(CSR_MHINT, 0x6e30c);
-    // enable l2cache TLB prefetch
-    csr_set(CSR_MCCR2, 0xe0000009);
+    // enable Dache, Icache, branch predict, prefetch predict, unalign access, ECC en
+    csr_set(CSR_MSETUP, 0x10073);
+    // csr_set(CSR_MCPM, 0x300000031);
+    // csr_set(CSR_MPCTL, 0xB10);
 }
 
 static void wakeup_other_core(void)
 {
     int i;
-    u32 hartid, clusterid, coreid;
+    u32 hartid, clusterid, coreid, cluster_enabled = 0;
     u32 *cpu_reset_reg;
 
     // hart0 is already boot up
@@ -201,9 +192,14 @@ static void wakeup_other_core(void)
         coreid = (hartid & CORE_ID_MASK) >> CORE_ID_BITSHIFT;
 
         cpu_reset_reg = (u32 *)CPU_RESET_BASE_ADDR + clusterid;
-        if ((clusterid > 0) && (0x0F != (readl(cpu_reset_reg) & 0x0F))) {
-            // de-assert cluster 1 APB, L2C, PIC, ACEM/LLP
-            writel(0x0F, cpu_reset_reg);
+        if (0 == (cluster_enabled & (1 << clusterid))) {
+            cluster_enabled |= 1 << clusterid;
+
+            if (0 != clusterid)
+                // de-assert cluster 1 APB, L2C, PIC, ACEM/LLP
+                writel(readl(cpu_reset_reg) | 0x0F, cpu_reset_reg);
+            /* enable cci for current cluster */
+            cci_enable_snoop_dvm_reqs(clusterid);
         }
 
         writel(readl(cpu_reset_reg) | 1 << (coreid + 4), cpu_reset_reg);
@@ -216,12 +212,8 @@ static int c910_early_init(bool cold_boot)
         if (!qemu_mode) {
             cache_enable();
 
-            c910_regs.mcor = csr_read(CSR_MCOR);
-            c910_regs.mhcr = csr_read(CSR_MHCR);
-            c910_regs.mccr2 = csr_read(CSR_MCCR2);
-            c910_regs.mhint = csr_read(CSR_MHINT);
-            c910_regs.mxstatus = csr_read(CSR_MXSTATUS);
-
+            c910_regs.msetup = csr_read(CSR_MSETUP);
+            c910_regs.mcpm = csr_read(CSR_MCPM);
             wakeup_other_core();
         }
     } else {

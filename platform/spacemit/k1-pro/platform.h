@@ -7,14 +7,18 @@
 #ifndef _C910_PLATFORM_H_
 #define _C910_PLATFORM_H_
 
-#define CSR_MCOR         0x7c2
-#define CSR_MHCR         0x7c1
-#define CSR_MCCR2        0x7c3
-#define CSR_MHINT        0x7c5
-#define CSR_MXSTATUS     0x7c0
-#define CSR_PLIC_BASE    0xfc1
-#define CSR_MRMR         0x7c6
-#define CSR_MRVBR        0x7c7
+#define CSR_MCOR        0x7c2
+#define CSR_MHCR        0x7c1
+#define CSR_MCCR2       0x7c3
+#define CSR_MHINT       0x7c5
+#define CSR_MXSTATUS    0x7c0
+#define CSR_PLIC_BASE   0xfc1
+#define CSR_MRMR        0x7c6
+#define CSR_MRVBR       0x7c7
+#define CSR_MSETUP      0x7C0
+#define CSR_MCPM        0x7C1
+#define CSR_MPCTL       0x7D0
+#define CSR_ML2SETUP    0x7F0
 
 #define PLATFORM_CCI_ADDR           (0x0FE00000)
 #define CPU_RESET_BASE_ADDR         (0x2F024000)
@@ -44,11 +48,8 @@ struct c910_regs_struct {
     u64 pmpaddr6;
     u64 pmpaddr7;
     u64 pmpcfg0;
-    u64 mcor;
-    u64 mhcr;
-    u64 mccr2;
-    u64 mhint;
-    u64 mxstatus;
+    u64 msetup;
+    u64 mcpm;
     u64 plic_base_addr;
     u64 clint_base_addr;
 };
