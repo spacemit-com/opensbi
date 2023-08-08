@@ -72,7 +72,7 @@ FW_JUMP_FDT_ADDR=0x4FF00000
 # Optional parameters are commented out. Uncomment and define these parameters
 # as needed.
 #
-FW_PAYLOAD=<y|n>
+FW_PAYLOAD=y
 # This needs to be 4MB aligned for 32-bit support
 # This needs to be 2MB aligned for 64-bit support
 ifeq ($(PLATFORM_RISCV_XLEN), 32)
@@ -80,6 +80,6 @@ FW_PAYLOAD_OFFSET=0x400000
 else
 FW_PAYLOAD_OFFSET=0x200000
 endif
-# FW_PAYLOAD_ALIGN=0x1000
+FW_PAYLOAD_ALIGN=0x1000
 # FW_PAYLOAD_PATH="path to next boot stage binary image file"
-# FW_PAYLOAD_FDT_ADDR=0x82200000
+FW_PAYLOAD_FDT_ADDR=0xa00FF00000
