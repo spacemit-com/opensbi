@@ -1,7 +1,7 @@
 #
 # SPDX-License-Identifier: BSD-2-Clause
 #
-# Copyright (c) 2022 Space-T.
+# Copyright (c) 2022 Spacemit.
 #
 # Authors:
 #   zhouxl <zhouxl@spacemit.com>

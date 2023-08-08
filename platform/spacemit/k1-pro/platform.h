@@ -1,11 +1,11 @@
 /*
  * SPDX-License-Identifier: BSD-2-Clause
  *
- * Copyright (c) 2022 Space-T.
+ * Copyright (c) 2022 Spacemit.
  */
 
-#ifndef _C910_PLATFORM_H_
-#define _C910_PLATFORM_H_
+#ifndef _K1PRO_PLATFORM_H_
+#define _K1PRO_PLATFORM_H_
 
 #define CSR_MCOR        0x7c2
 #define CSR_MHCR        0x7c1
@@ -23,9 +23,9 @@
 #define PLATFORM_CCI_ADDR           (0x0FE00000)
 #define CPU_RESET_BASE_ADDR         (0x2F024000)
 
-#define C910_PLIC_CLINT_OFFSET      0x04000000  /* 64M */
-#define C910_PLIC_DELEG_OFFSET      0x001ffffc
-#define C910_PLIC_DELEG_ENABLE      0x1
+#define X60_PLIC_CLINT_OFFSET       0x04000000  /* 64M */
+#define X60_PLIC_DELEG_OFFSET       0x001ffffc
+#define X60_PLIC_DELEG_ENABLE       0x1
 
 #define CLUSTER_ID_BITSHIFT         (2)
 #define CLUSTER_ID_MASK             (0x0f << CLUSTER_ID_BITSHIFT)
@@ -38,7 +38,7 @@
 #define PLAT_CCI_CLUSTER3_IFACE_IX  3
 
 
-struct c910_regs_struct {
+struct x60_regs_struct {
     u64 pmpaddr0;
     u64 pmpaddr1;
     u64 pmpaddr2;
@@ -54,4 +54,4 @@ struct c910_regs_struct {
     u64 clint_base_addr;
 };
 
-#endif /* _C910_PLATFORM_H_ */
+#endif /* _K1PRO_PLATFORM_H_ */

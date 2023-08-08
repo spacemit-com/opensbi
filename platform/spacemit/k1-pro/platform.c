@@ -1,7 +1,7 @@
 /*
  * SPDX-License-Identifier: BSD-2-Clause
  *
- * Copyright (c) 2022 Space-T.
+ * Copyright (c) 2022 Spacemit.
  */
 
 #include <sbi/riscv_asm.h>
@@ -74,7 +74,7 @@ static const int cci_map[] = {
     PLAT_CCI_CLUSTER3_IFACE_IX,
 };
 
-static struct c910_regs_struct c910_regs;
+static struct x60_regs_struct x60_regs;
 static u32 generic_hart_index2id[SBI_HARTMASK_MAX_BITS] = {0};
 static int qemu_mode;
 
@@ -161,7 +161,7 @@ unsigned long fw_platform_init(unsigned long arg0, unsigned long arg1,
     return arg1;
 }
 
-static struct c910_regs_struct c910_regs;
+static struct x60_regs_struct x60_regs;
 
 void raise_soc_performance(void)
 {
@@ -206,14 +206,14 @@ static void wakeup_other_core(void)
     }
 }
 
-static int c910_early_init(bool cold_boot)
+static int k1pro_early_init(bool cold_boot)
 {
     if (cold_boot) {
         if (!qemu_mode) {
             cache_enable();
 
-            c910_regs.msetup = csr_read(CSR_MSETUP);
-            c910_regs.mcpm = csr_read(CSR_MCPM);
+            x60_regs.msetup = csr_read(CSR_MSETUP);
+            x60_regs.mcpm = csr_read(CSR_MCPM);
             wakeup_other_core();
         }
     } else {
@@ -232,7 +232,7 @@ static int platform_early_init(bool cold_boot)
 {
     int ret = 0;
 
-    ret = c910_early_init(cold_boot);
+    ret = k1pro_early_init(cold_boot);
 
     return ret;
 }
@@ -255,8 +255,8 @@ static int platform_final_init(bool cold_boot)
 static int platform_irqchip_init(bool cold_boot)
 {
     /* Delegate plic enable into S-mode */
-    writel(C910_PLIC_DELEG_ENABLE,
-           (void *)plic.addr + C910_PLIC_DELEG_OFFSET);
+    writel(X60_PLIC_DELEG_ENABLE,
+           (void *)plic.addr + X60_PLIC_DELEG_OFFSET);
 
     return 0;
 }
