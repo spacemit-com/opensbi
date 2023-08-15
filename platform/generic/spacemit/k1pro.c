@@ -16,13 +16,15 @@
 #include <sbi_utils/fdt/fdt_helper.h>
 #include <sbi_utils/psci/psci_lib.h>
 #include <sbi_utils/cci/cci.h>
+#include <sbi/sbi_hsm.h>
+#include <sbi_utils/psci/psci.h>
+#include <sbi_utils/cache/cacheflush.h>
+#include <../../../lib/utils/psci/psci_private.h>
+#include <sbi_utils/psci/plat/arm/common/plat_arm.h>
 
-#define CSR_MHCR                    (0x7c1)
-#define CSR_MCCR2                   (0x7c3)
 #define CSR_MHINT                   (0x7c5)
 #define CSR_MRMR                    (0x7c6)
 #define CSR_MRVBR                   (0x7c7)
-#define CSR_MSETUP                  (0x7C0)
 #define CSR_MCPM                    (0x7C1)
 #define CSR_MPCTL                   (0x7D0)
 #define CSR_ML2SETUP                (0x7F0)
@@ -33,11 +35,6 @@
 #define X60_PLIC_CLINT_OFFSET       (0x04000000)  /* 64M */
 #define X60_PLIC_DELEG_OFFSET       (0x001ffffc)
 #define X60_PLIC_DELEG_ENABLE       (0x1)
-
-#define CLUSTER_ID_BITSHIFT         (2)
-#define CLUSTER_ID_MASK             (0x0f << CLUSTER_ID_BITSHIFT)
-#define CORE_ID_BITSHIFT            (0)
-#define CORE_ID_MASK                (((1 << CLUSTER_ID_BITSHIFT) - 1) << CORE_ID_BITSHIFT)
 
 #define PLAT_CCI_CLUSTER0_IFACE_IX  0
 #define PLAT_CCI_CLUSTER1_IFACE_IX  1
@@ -59,30 +56,25 @@ void raise_soc_performance(void)
     csr_write(CSR_MHINT, 0x6e30c);
 }
 
-static void cache_enable(void)
-{
-    // enable Dache, Icache, branch predict, prefetch predict, unalign access, ECC en
-    csr_set(CSR_MSETUP, 0x10073);
-    // csr_set(CSR_MCPM, 0x300000031);
-    // csr_set(CSR_MPCTL, 0xB10);
-}
-
 static void wakeup_other_core(void)
 {
     int i;
-    u32 hartid, clusterid, coreid, cluster_enabled = 0;
-    u32 *cpu_reset_reg;
+    u32 hartid, clusterid, cluster_enabled = 0;
 
     // hart0 is already boot up
     for (i = 1; i < platform.hart_count; i++) {
         hartid = platform.hart_index2id[i];
 
         // cluster0 had release reset
-        clusterid = (hartid & CLUSTER_ID_MASK) >> CLUSTER_ID_BITSHIFT;
-        coreid = (hartid & CORE_ID_MASK) >> CORE_ID_BITSHIFT;
+        clusterid = MPIDR_AFFLVL1_VAL(hartid);;
 
+#ifndef CONFIG_ARM_PSCI_SUPPORT
+    	u32 *cpu_reset_reg;
+	u32 coreid;
         cpu_reset_reg = (u32 *)CPU_RESET_BASE_ADDR + clusterid;
-        if (0 == (cluster_enabled & (1 << clusterid))) {
+        coreid = MPIDR_AFFLVL0_VAL(hartid);
+
+	if (0 == (cluster_enabled & (1 << clusterid))) {
             cluster_enabled |= 1 << clusterid;
 
             if (0 != clusterid)
@@ -93,6 +85,15 @@ static void wakeup_other_core(void)
         }
 
         writel(readl(cpu_reset_reg) | 1 << (coreid + 4), cpu_reset_reg);
+#else
+	/* we only enable snoop of cluster0 */
+        if (0 == (cluster_enabled & (1 << clusterid))) {
+            cluster_enabled |= 1 << clusterid;
+            if (0 == clusterid) {
+		cci_enable_snoop_dvm_reqs(clusterid);
+	    }
+	}
+#endif
     }
 }
 
@@ -104,24 +105,72 @@ static int spacemit_k1pro_early_init(bool cold_boot, const struct fdt_match *mat
     if (cold_boot) {
         /* initiate cci */
         cci_init(PLATFORM_CCI_ADDR, cci_map, array_size(cci_map));
-
-        cache_enable();
-        wakeup_other_core();
+	/* enable dcache */
+        csi_enable_dcache();
+	/* wakeup other core ? */
+	wakeup_other_core();
+	/* initialize */
+#ifdef CONFIG_ARM_PSCI_SUPPORT
+	plat_arm_pwrc_setup();
+#endif
     } else {
-        cache_enable();
+#ifdef CONFIG_ARM_PSCI_SUPPORT
+	psci_warmboot_entrypoint();
+#endif
+	;
     }
 
     return 0;
 }
+
+#ifdef CONFIG_ARM_PSCI_SUPPORT
+/** Start (or power-up) the given hart */
+static int spacemit_hart_start(unsigned int hartid, unsigned long saddr)
+{
+	return psci_cpu_on_start(hartid, saddr);
+}
+
+/**
+ * Stop (or power-down) the current hart from running. This call
+ * doesn't expect to return if success.
+ */
+static int spacemit_hart_stop(void)
+{
+	psci_cpu_off();
+	return 0;
+}
+
+static int spacemit_hart_suspend(unsigned int suspend_type)
+{
+	return 0;
+}
+
+static void spacemit_hart_resume(void)
+{
+
+}
+
+static const struct sbi_hsm_device spacemit_hsm_ops = {
+	.name		= "spacemit-hsm",
+	.hart_start	= spacemit_hart_start,
+	.hart_stop	= spacemit_hart_stop,
+	.hart_suspend	= spacemit_hart_suspend,
+	.hart_resume	= spacemit_hart_resume,
+};
+#endif
 
 /*
  * Platform final initialization.
  */
 static int spacemit_k1pro_final_init(bool cold_boot, const struct fdt_match *match)
 {
+#ifdef CONFIG_ARM_PSCI_SUPPORT
     /* for clod boot, we build the cpu topology structure */
-    if (cold_boot)
+    if (cold_boot) {
+	    sbi_hsm_set_device(&spacemit_hsm_ops);
 	    return psci_setup();
+    }
+#endif
 
     return 0;
 }

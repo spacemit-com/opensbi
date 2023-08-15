@@ -8,16 +8,18 @@ static const unsigned char plat_power_domain_tree_desc[] = {
 	/* No of children for the first cluster node */
         SPACEMIT_CLUSTER0_CORE_COUNT,
 	/* No of children for the second cluster node */
-	SPACEMIT_CLUSTER1_CORE_COUNT,
+	/* SPACEMIT_CLUSTER1_CORE_COUNT, */
 };
 
 int plat_core_pos_by_mpidr(u_register_t mpidr)
 {
-	return 0;
+	unsigned int cluster = MPIDR_AFFLVL1_VAL(mpidr);
+	unsigned int core = MPIDR_AFFLVL0_VAL(mpidr);
+
+	return cluster * PLATFORM_MAX_CPUS_PER_CLUSTER + core;
 }
 
 const unsigned char *plat_get_power_domain_tree_desc(void)
 {
         return plat_power_domain_tree_desc;
 }
-

@@ -7,11 +7,14 @@
 #   Anup Patel <anup.patel@wdc.com>
 #
 
-libsbiutils-objs-y += psci/psci_common.o
+libsbiutils-objs-$(CONFIG_ARM_PSCI_SUPPORT) += psci/psci_common.o
 
-libsbiutils-objs-y += psci/psci_setup.o
+libsbiutils-objs-$(CONFIG_ARM_PSCI_SUPPORT) += psci/psci_setup.o
 
-libsbiutils-objs-y += psci/psci_platform.o
+libsbiutils-objs-$(CONFIG_ARM_PSCI_SUPPORT) += psci/psci_main.o
 
-# carray-psci_protocol_drivers-y += psci_protocol
-# libsbiutils-objs-y += psci/psci_protocol.o
+libsbiutils-objs-$(CONFIG_ARM_PSCI_SUPPORT) += psci/psci_on.o
+
+libsbiutils-objs-$(CONFIG_ARM_PSCI_SUPPORT) += psci/psci_off.o
+
+libsbiutils-objs-$(CONFIG_ARM_PSCI_SUPPORT) += psci/spacemit/spacemit_topology.o

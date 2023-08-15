@@ -1,0 +1,5 @@
+# SPDX-License-Identifier: BSD-2-Clause
+
+config ARM_PSCI_SUPPORT
+	bool "Support psci protocol"
+	default n

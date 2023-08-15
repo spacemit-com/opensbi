@@ -2,7 +2,9 @@
 #define __PSCI_PRIVATE_H__
 
 #include <sbi/riscv_locks.h>
+#include <sbi/sbi_platform.h>
 #include <sbi_utils/psci/psci.h>
+#include <sbi_utils/cache/cacheflush.h>
 
 /*******************************************************************************
  * The following two data structures implement the power domain tree. The tree
@@ -57,20 +59,45 @@ typedef struct cpu_pwr_domain_node {
 	spinlock_t cpu_lock;
 } cpu_pd_node_t;
 
+/*
+ * On systems where participant CPUs are cache-coherent, we can use spinlocks
+ * instead of bakery locks.
+ */
 #define DEFINE_PSCI_LOCK(_name)         spinlock_t _name
+#define DECLARE_PSCI_LOCK(_name)        extern DEFINE_PSCI_LOCK(_name)
+
+/* One lock is required per non-CPU power domain node */
+DECLARE_PSCI_LOCK(psci_locks[PSCI_NUM_NON_CPU_PWR_DOMAINS]);
 
 static inline void psci_lock_init(non_cpu_pd_node_t *non_cpu_pd_node, unsigned short idx)
 {
         non_cpu_pd_node[idx].lock_index = idx;
 }
 
+static inline void psci_lock_get(non_cpu_pd_node_t *non_cpu_pd_node)
+{
+        spin_lock(&psci_locks[non_cpu_pd_node->lock_index]);
+}
 
+static inline void psci_lock_release(non_cpu_pd_node_t *non_cpu_pd_node)
+{
+        spin_unlock(&psci_locks[non_cpu_pd_node->lock_index]);
+}
 
+/* common */
 extern non_cpu_pd_node_t psci_non_cpu_pd_nodes[PSCI_NUM_NON_CPU_PWR_DOMAINS];
 extern cpu_pd_node_t psci_cpu_pd_nodes[PLATFORM_CORE_COUNT];
 extern unsigned int psci_plat_core_count;
 extern unsigned long psci_delta_off;
+extern const plat_psci_ops_t *psci_plat_pm_ops;
 
+void psci_acquire_pwr_domain_locks(unsigned int end_pwrlvl,
+                                   const unsigned int *parent_nodes);
+void psci_release_pwr_domain_locks(unsigned int end_pwrlvl,
+                                   const unsigned int *parent_nodes);
+unsigned int psci_find_max_off_lvl(const psci_power_state_t *state_info);
+
+int psci_validate_mpidr(u_register_t mpidr);
 void psci_get_parent_pwr_domain_nodes(unsigned int cpu_idx,
 				      unsigned int end_lvl,
 				      unsigned int *node_index);
@@ -82,9 +109,71 @@ void psci_set_req_local_pwr_state(unsigned int pwrlvl,
 					 unsigned int cpu_idx,
 					 plat_local_state_t req_pwr_state);
 void psci_set_aff_info_state(aff_info_state_t aff_state);
+aff_info_state_t psci_get_aff_info_state(void);
+aff_info_state_t psci_get_aff_info_state_by_idx(unsigned int idx);
+void psci_set_aff_info_state_by_idx(unsigned int idx, aff_info_state_t aff_state);
 void psci_set_cpu_local_state(plat_local_state_t state);
 void psci_set_pwr_domains_to_run(unsigned int end_pwrlvl);
 
-const unsigned char *plat_get_power_domain_tree_desc(void);
+void psci_do_state_coordination(unsigned int end_pwrlvl,
+                                psci_power_state_t *state_info);
+
+int plat_core_pos_by_mpidr(u_register_t mpidr);
+
+static inline void psci_do_pwrup_cache_maintenance(uintptr_t scratch)
+{
+	unsigned long sp;
+
+	/* invalidate the used sp */
+	sp = __get_CurrentSP();
+
+	csi_dcache_invalid_range(sp, scratch - sp);
+
+	/* enable dcache */
+	csi_enable_dcache();
+}
+
+static inline void psci_disable_core_snoop(void)
+{
+	unsigned int hartid = current_hartid();
+	unsigned int core_id = MPIDR_AFFLVL1_VAL(hartid) * PLATFORM_MAX_CPUS_PER_CLUSTER
+		+ MPIDR_AFFLVL0_VAL(hartid);
+
+	csr_clear(0x7f0, core_id);
+}
+
+static inline void psci_do_pwrdown_cache_maintenance(uintptr_t scratch)
+{
+	uintptr_t sp;
+
+	/* disable the data preftch */
+	csi_disable_data_preftch();
+
+	/* disable dcache */
+	csi_disable_dcache();
+
+	/* flush dacache all */
+	csi_flush_dcache_all();
+
+	/* disable core snoop */
+	psci_disable_core_snoop();
+
+	asm volatile ("fence iorw, iorw");
+
+	sp = __get_CurrentSP();
+
+	/* flush the used sp */
+	csi_dcache_clean_invalid_range(sp, scratch - sp);
+	
+	/* invalid unused sp */
+	csi_dcache_invalid_range((scratch - SBI_PLATFORM_DEFAULT_HART_STACK_SIZE),
+			(sp + SBI_PLATFORM_DEFAULT_HART_STACK_SIZE - scratch));
+}
+
+/* psci cpu */
+int psci_cpu_on_start(u_register_t target, uintptr_t entrypoint);
+void psci_cpu_on_finish(unsigned int cpu_idx, const psci_power_state_t *state_info);
+
+int psci_do_cpu_off(unsigned int end_pwrlvl);
 
 #endif

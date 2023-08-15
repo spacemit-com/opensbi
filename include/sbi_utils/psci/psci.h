@@ -1,6 +1,18 @@
 #ifndef __PSCI_H__
 #define __PSCI_H__
 
+#include <sbi/sbi_types.h>
+
+#define MPIDR_AFFINITY0_MASK     0x3U
+#define MPIDR_AFFINITY1_MASK     0xfU
+#define MPIDR_AFF0_SHIFT        0U
+#define MPIDR_AFF1_SHIFT        2U
+
+
+#define MPIDR_AFFLVL0_VAL(mpidr) \
+                (((mpidr) >> MPIDR_AFF0_SHIFT) & MPIDR_AFFINITY0_MASK)
+#define MPIDR_AFFLVL1_VAL(mpidr) \
+                (((mpidr) >> MPIDR_AFF1_SHIFT) & MPIDR_AFFINITY1_MASK)
 /*
  *  Macros for local power states in ARM platforms encoded by State-ID field
  *  within the power-state parameter.
@@ -12,7 +24,6 @@
 /* Local power state for OFF/power-down. Valid for CPU and cluster power
    domains */
 #define ARM_LOCAL_STATE_OFF     2U
-
 
 /*
  * This macro defines the deepest retention state possible. A higher state
@@ -35,6 +46,20 @@ typedef unsigned char plat_local_state_t;
 #define PSCI_LOCAL_STATE_RUN    0U
 
 typedef unsigned long u_register_t;
+
+/*******************************************************************************
+ * PSCI error codes
+ ******************************************************************************/
+#define PSCI_E_SUCCESS          0
+#define PSCI_E_NOT_SUPPORTED    -1
+#define PSCI_E_INVALID_PARAMS   -2
+#define PSCI_E_DENIED           -3
+#define PSCI_E_ALREADY_ON       -4
+#define PSCI_E_ON_PENDING       -5
+#define PSCI_E_INTERN_FAIL      -6
+#define PSCI_E_NOT_PRESENT      -7
+#define PSCI_E_DISABLED         -8
+#define PSCI_E_INVALID_ADDRESS  -9
 
 #define PSCI_INVALID_MPIDR      ~((u_register_t)0)
 
@@ -85,9 +110,10 @@ typedef struct psci_cpu_data {
 /*******************************************************************************
  * spacemit topology related constants
  ******************************************************************************/
-#define SPACEMIT_CLUSTER_COUNT              2U
+#define SPACEMIT_CLUSTER_COUNT              1U
 #define SPACEMIT_CLUSTER0_CORE_COUNT        4U
-#define SPACEMIT_CLUSTER1_CORE_COUNT        4U
+#define SPACEMIT_CLUSTER1_CORE_COUNT        2U
+#define PLATFORM_MAX_CPUS_PER_CLUSTER SPACEMIT_CLUSTER0_CORE_COUNT
 
 #define PLATFORM_CORE_COUNT	(SPACEMIT_CLUSTER0_CORE_COUNT + \
 					SPACEMIT_CLUSTER1_CORE_COUNT)
@@ -100,5 +126,101 @@ typedef struct psci_cpu_data {
 
 #define PSCI_NUM_NON_CPU_PWR_DOMAINS    (PSCI_NUM_PWR_DOMAINS - \
                                          PLATFORM_CORE_COUNT)
+
+/*
+ * These are the power states reported by PSCI_NODE_HW_STATE API for the
+ * specified CPU. The definitions of these states can be found in Section 5.15.3
+ * of PSCI specification (ARM DEN 0022C).
+ */
+#define HW_ON           0
+#define HW_OFF          1
+#define HW_STANDBY      2
+
+/*****************************************************************************
+ * This data structure defines the representation of the power state parameter
+ * for its exchange between the generic PSCI code and the platform port. For
+ * example, it is used by the platform port to specify the requested power
+ * states during a power management operation. It is used by the generic code to
+ * inform the platform about the target power states that each level should
+ * enter.
+ ****************************************************************************/
+typedef struct psci_power_state {
+        /*
+         * The pwr_domain_state[] stores the local power state at each level
+         * for the CPU.
+         */
+        plat_local_state_t pwr_domain_state[PLAT_MAX_PWR_LVL + 1U ];
+#if PSCI_OS_INIT_MODE
+        /*
+         * The highest power level at which the current CPU is the last running
+         * CPU.
+         */
+        unsigned int last_at_pwrlvl;
+#endif
+} psci_power_state_t;
+
+/*
+ * Function to test whether the plat_local_state is RUN state
+ */
+static inline int is_local_state_run(unsigned int plat_local_state)
+{
+        return (plat_local_state == PSCI_LOCAL_STATE_RUN) ? 1 : 0;
+}
+
+/*
+ * Function to test whether the plat_local_state is OFF state
+ */
+static inline int is_local_state_off(unsigned int plat_local_state)
+{
+        return ((plat_local_state > PLAT_MAX_RET_STATE) &&
+                (plat_local_state <= PLAT_MAX_OFF_STATE)) ? 1 : 0;
+}
+
+/*******************************************************************************
+ * Structure populated by platform specific code to export routines which
+ * perform common low level power management functions
+ ******************************************************************************/
+typedef struct plat_psci_ops {
+        void (*cpu_standby)(plat_local_state_t cpu_state);
+        int (*pwr_domain_on)(u_register_t mpidr);
+        void (*pwr_domain_off)(const psci_power_state_t *target_state);
+        int (*pwr_domain_off_early)(const psci_power_state_t *target_state);
+        void (*pwr_domain_suspend_pwrdown_early)(
+                                const psci_power_state_t *target_state);
+#if PSCI_OS_INIT_MODE
+        int (*pwr_domain_suspend)(const psci_power_state_t *target_state);
+#else
+        void (*pwr_domain_suspend)(const psci_power_state_t *target_state);
+#endif
+        void (*pwr_domain_on_finish)(const psci_power_state_t *target_state);
+        void (*pwr_domain_on_finish_late)(
+                                const psci_power_state_t *target_state);
+        void (*pwr_domain_suspend_finish)(
+                                const psci_power_state_t *target_state);
+        void (*pwr_domain_pwr_down_wfi)(
+                                const psci_power_state_t *target_state);
+        void (*system_off)(void);
+        void (*system_reset)(void);
+        int (*validate_power_state)(unsigned int power_state,
+                                    psci_power_state_t *req_state);
+        int (*validate_ns_entrypoint)(uintptr_t ns_entrypoint);
+        void (*get_sys_suspend_power_state)(
+                                    psci_power_state_t *req_state);
+        int (*get_pwr_lvl_state_idx)(plat_local_state_t pwr_domain_state,
+                                    int pwrlvl);
+        int (*translate_power_state_by_mpidr)(u_register_t mpidr,
+                                    unsigned int power_state,
+                                    psci_power_state_t *output_state);
+        int (*get_node_hw_state)(u_register_t mpidr, unsigned int power_level);
+        int (*mem_protect_chk)(uintptr_t base, u_register_t length);
+        int (*read_mem_protect)(int *val);
+        int (*write_mem_protect)(int val);
+        int (*system_reset2)(int is_vendor,
+                                int reset_type, u_register_t cookie);
+} plat_psci_ops_t;
+
+int psci_cpu_on(u_register_t target_cpu, uintptr_t entrypoint);
+int psci_cpu_off(void);
+int psci_affinity_info(u_register_t target_affinity, unsigned int lowest_affinity_level);
 
 #endif

@@ -5,6 +5,8 @@
  */
 
 #include <sbi/sbi_console.h>
+#include <sbi_utils/cache/cacheflush.h>
+#include <sbi_utils/psci/plat/common/platform.h>
 #include <sbi/sbi_hart.h>
 #include <sbi/sbi_platform.h>
 #include <sbi/sbi_scratch.h>
@@ -61,10 +63,8 @@ static void psci_init_pwr_domain_node(uint16_t node_idx,
 
 		/* Set the power state to OFF state */
 		svc_cpu_data->local_state = PLAT_MAX_OFF_STATE;
-#if 0
-		psci_flush_dcache_range((uintptr_t)svc_cpu_data,
-                                          sizeof(*svc_cpu_data));
-#endif
+
+		csi_dcache_clean_invalid_range((uintptr_t)svc_cpu_data, sizeof(psci_cpu_data_t));
 	}
 }
 
@@ -197,12 +197,8 @@ int psci_setup(void)
 	unsigned int cpu_idx;
 	const unsigned char *topology_tree;
 	unsigned int hartid = current_hartid();
-	const struct sbi_platform *sbi = sbi_platform_thishart_ptr();
 
-        for (cpu_idx = 0; cpu_idx < sbi->hart_count; ++cpu_idx) {
-		if (sbi->hart_index2id[cpu_idx] == hartid)
-			break;
-        }
+	cpu_idx = plat_core_pos_by_mpidr(hartid); 
 
 	psci_delta_off = sbi_scratch_alloc_offset(sizeof(psci_cpu_data_t));
 	if (!psci_delta_off)
@@ -229,9 +225,8 @@ int psci_setup(void)
 	psci_set_pwr_domains_to_run(PLAT_MAX_PWR_LVL);
 
 	psci_print_power_domain_map();
-#if 0
-	(void) plat_setup_psci_ops((uintptr_t)lib_args->mailbox_ep,
-				   &psci_plat_pm_ops);
+
+	(void) plat_setup_psci_ops(0, &psci_plat_pm_ops);
 	if (psci_plat_pm_ops == NULL) {
 		sbi_printf("%s:%d, invalid psci ops\n", __func__, __LINE__);
 		sbi_hart_hang();
@@ -241,8 +236,7 @@ int psci_setup(void)
          * Flush `psci_plat_pm_ops` as it will be accessed by secondary CPUs
          * during warm boot, possibly before data cache is enabled.
          */
-        psci_flush_dcache_range((uintptr_t)&psci_plat_pm_ops,
-                                        sizeof(psci_plat_pm_ops));
-#endif
+	csi_dcache_clean_invalid_range((uintptr_t)&psci_plat_pm_ops, sizeof(*psci_plat_pm_ops));
+
 	return 0;
 }

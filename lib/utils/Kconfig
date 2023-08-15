@@ -22,4 +22,8 @@ source "$(OPENSBI_SRC_DIR)/lib/utils/sys/Kconfig"
 
 source "$(OPENSBI_SRC_DIR)/lib/utils/timer/Kconfig"
 
+source "$(OPENSBI_SRC_DIR)/lib/utils/arm_scmi/Kconfig"
+
+source "$(OPENSBI_SRC_DIR)/lib/utils/psci/Kconfig"
+
 endmenu
