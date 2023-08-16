@@ -1,6 +1,0 @@
-# SPDX-License-Identifier: BSD-2-Clause
-
-config ARM_SCMI_PROTOCOL_SUPPORT
-	bool "Support scmi protocol"
-	select ARM_PSCI_SUPPORT
-	default n

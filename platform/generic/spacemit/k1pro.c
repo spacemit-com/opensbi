@@ -110,7 +110,7 @@ static int spacemit_k1pro_early_init(bool cold_boot, const struct fdt_match *mat
 	/* wakeup other core ? */
 	wakeup_other_core();
 	/* initialize */
-#ifdef CONFIG_ARM_PSCI_SUPPORT
+#ifdef CONFIG_ARM_SCMI_PROTOCOL_SUPPORT
 	plat_arm_pwrc_setup();
 #endif
     } else {
