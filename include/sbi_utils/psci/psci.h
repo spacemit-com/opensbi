@@ -2,12 +2,7 @@
 #define __PSCI_H__
 
 #include <sbi/sbi_types.h>
-
-#define MPIDR_AFFINITY0_MASK     0x3U
-#define MPIDR_AFFINITY1_MASK     0xfU
-#define MPIDR_AFF0_SHIFT        0U
-#define MPIDR_AFF1_SHIFT        2U
-
+#include <spacemit/spacemit_config.h>
 
 #define MPIDR_AFFLVL0_VAL(mpidr) \
                 (((mpidr) >> MPIDR_AFF0_SHIFT) & MPIDR_AFFINITY0_MASK)
@@ -94,25 +89,11 @@ typedef struct psci_cpu_data {
 	plat_local_state_t local_state;
 } psci_cpu_data_t;
 
-/* This is the power level corresponding to a CPU */
-#define PSCI_CPU_PWR_LVL		0U
-
-#define PLAT_MAX_PWR_LVL                2U
-
 /*
  * Macro to represent invalid affinity level within PSCI.
  */
 #define PSCI_INVALID_PWR_LVL    (PLAT_MAX_PWR_LVL + 1U)
 
-
-#define ARM_SYSTEM_COUNT                1U
-
-/*******************************************************************************
- * spacemit topology related constants
- ******************************************************************************/
-#define SPACEMIT_CLUSTER_COUNT              1U
-#define SPACEMIT_CLUSTER0_CORE_COUNT        4U
-#define SPACEMIT_CLUSTER1_CORE_COUNT        2U
 #define PLATFORM_MAX_CPUS_PER_CLUSTER SPACEMIT_CLUSTER0_CORE_COUNT
 
 #define PLATFORM_CORE_COUNT	(SPACEMIT_CLUSTER0_CORE_COUNT + \

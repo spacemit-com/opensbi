@@ -19,4 +19,4 @@ libsbiutils-objs-$(CONFIG_ARM_SCMI_PROTOCOL_SUPPORT) += arm_scmi/css/scp/css_pm_
 
 libsbiutils-objs-$(CONFIG_ARM_SCMI_PROTOCOL_SUPPORT) += arm_scmi/css/mhu/css_mhu_doorbell.o
 
-libsbiutils-objs-$(CONFIG_ARM_SCMI_PROTOCOL_SUPPORT) += arm_scmi/board/spacemit/juno_pm.o
+libsbiutils-objs-$(CONFIG_ARM_SCMI_PROTOCOL_SUPPORT) += arm_scmi/board/spacemit/spacemit_pm.o

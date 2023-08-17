@@ -4,16 +4,9 @@
 #include <sbi/sbi_types.h>
 #include <sbi/riscv_asm.h>
 #include <sbi/riscv_encoding.h>
+#include <spacemit/spacemit_config.h>
 
 #define __ALWAYS_STATIC_INLINE  __attribute__((always_inline)) static inline
-
-#define CSR_MXSTATUS	0x7c0
-#define CSR_MHCR         0x7c1
-#define CSR_MCCR2        0x7c3
-#define CSR_MSETUP       0x7c0	
-
-#define CACHE_LINE_SIZE		(64)
-#define CACHE_INV_ADDR_Msk	(0xffffffffffffffff << 6)
 
 /**
   \brief   Clear Dcache by addr

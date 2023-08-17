@@ -4,6 +4,7 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
+#include <spacemit/spacemit_config.h>
 #include <sbi_utils/psci/drivers/arm/css/scmi.h>
 #include <sbi_utils/psci/psci.h>
 #include <sbi_utils/psci/plat/arm/common/plat_arm.h>
@@ -15,9 +16,9 @@ const plat_psci_ops_t *plat_arm_psci_override_pm_ops(plat_psci_ops_t *ops)
 	return css_scmi_override_pm_ops(ops);
 }
 
-static scmi_channel_plat_info_t juno_scmi_plat_info = {
-	.scmi_mbx_mem = 0x2f902080,
-	.db_reg_addr = 0x2f824000,
+static scmi_channel_plat_info_t spacemit_scmi_plat_info = {
+	.scmi_mbx_mem = SCMI_MAILBOX_SHARE_MEM,
+	.db_reg_addr = PLAT_MAILBOX_REG_BASE,
 	/* no used */
 	.db_preserve_mask = 0xfffffffe,
 	/* no used */
@@ -27,13 +28,12 @@ static scmi_channel_plat_info_t juno_scmi_plat_info = {
 
 scmi_channel_plat_info_t *plat_css_get_scmi_info(unsigned int channel_id)
 {
-        return &juno_scmi_plat_info;
+        return &spacemit_scmi_plat_info;
 }
 
 /*
  * The array mapping platform core position (implemented by plat_my_core_pos())
  * to the SCMI power domain ID implemented by SCP.
  */
-const uint32_t plat_css_core_pos_to_scmi_dmn_id_map[PLATFORM_CORE_COUNT] = {
-                        0, 1, 2, 3 };
+const uint32_t plat_css_core_pos_to_scmi_dmn_id_map[PLATFORM_CORE_COUNT] = PLAT_SCMI_DOMAIN_MAP;
 

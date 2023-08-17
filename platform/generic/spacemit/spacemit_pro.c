@@ -21,34 +21,11 @@
 #include <sbi_utils/cache/cacheflush.h>
 #include <../../../lib/utils/psci/psci_private.h>
 #include <sbi_utils/psci/plat/arm/common/plat_arm.h>
-
-#define CSR_MHINT                   (0x7c5)
-#define CSR_MRMR                    (0x7c6)
-#define CSR_MRVBR                   (0x7c7)
-#define CSR_MCPM                    (0x7C1)
-#define CSR_MPCTL                   (0x7D0)
-#define CSR_ML2SETUP                (0x7F0)
-
-#define PLATFORM_CCI_ADDR           (0x0FE00000)
-#define CPU_RESET_BASE_ADDR         (0x2F024000)
-
-#define X60_PLIC_CLINT_OFFSET       (0x04000000)  /* 64M */
-#define X60_PLIC_DELEG_OFFSET       (0x001ffffc)
-#define X60_PLIC_DELEG_ENABLE       (0x1)
-
-#define PLAT_CCI_CLUSTER0_IFACE_IX  0
-#define PLAT_CCI_CLUSTER1_IFACE_IX  1
-#define PLAT_CCI_CLUSTER2_IFACE_IX  2
-#define PLAT_CCI_CLUSTER3_IFACE_IX  3
+#include <spacemit/spacemit_config.h>
 
 extern struct sbi_platform platform;
 
-static const int cci_map[] = {
-    PLAT_CCI_CLUSTER0_IFACE_IX,
-    PLAT_CCI_CLUSTER1_IFACE_IX,
-    PLAT_CCI_CLUSTER2_IFACE_IX,
-    PLAT_CCI_CLUSTER3_IFACE_IX,
-};
+PLAT_CCI_MAP
 
 void raise_soc_performance(void)
 {
@@ -100,7 +77,7 @@ static void wakeup_other_core(void)
 /*
  * Platform early initialization.
  */
-static int spacemit_k1pro_early_init(bool cold_boot, const struct fdt_match *match)
+static int spacemit_pro_early_init(bool cold_boot, const struct fdt_match *match)
 {
     if (cold_boot) {
         /* initiate cci */
@@ -116,8 +93,9 @@ static int spacemit_k1pro_early_init(bool cold_boot, const struct fdt_match *mat
     } else {
 #ifdef CONFIG_ARM_PSCI_SUPPORT
 	psci_warmboot_entrypoint();
+#else
+	csi_enable_dcache();
 #endif
-	;
     }
 
     return 0;
@@ -137,6 +115,7 @@ static int spacemit_hart_start(unsigned int hartid, unsigned long saddr)
 static int spacemit_hart_stop(void)
 {
 	psci_cpu_off();
+
 	return 0;
 }
 
@@ -162,7 +141,7 @@ static const struct sbi_hsm_device spacemit_hsm_ops = {
 /*
  * Platform final initialization.
  */
-static int spacemit_k1pro_final_init(bool cold_boot, const struct fdt_match *match)
+static int spacemit_pro_final_init(bool cold_boot, const struct fdt_match *match)
 {
 #ifdef CONFIG_ARM_PSCI_SUPPORT
     /* for clod boot, we build the cpu topology structure */
@@ -175,13 +154,14 @@ static int spacemit_k1pro_final_init(bool cold_boot, const struct fdt_match *mat
     return 0;
 }
 
-static const struct fdt_match spacemit_k1pro_match[] = {
+static const struct fdt_match spacemit_pro_match[] = {
 	{ .compatible = "spacemit,k1-pro" },
+	{ .compatible = "spacemit,k1x" },
 	{ },
 };
 
-const struct platform_override spacemit_k1pro = {
-	.match_table = spacemit_k1pro_match,
-	.early_init = spacemit_k1pro_early_init,
-	.final_init = spacemit_k1pro_final_init,
+const struct platform_override spacemit_pro = {
+	.match_table = spacemit_pro_match,
+	.early_init = spacemit_pro_early_init,
+	.final_init = spacemit_pro_final_init,
 };
