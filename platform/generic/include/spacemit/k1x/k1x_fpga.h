@@ -17,7 +17,7 @@
 };
 
 /***************************cpu******************************/
-#define CPU_RESET_BASE_ADDR         (0x2F024000)
+#define CPU_RESET_BASE_ADDR         (0xD428292C)
 #define C0_RVBADDR_LO_ADDR          (0xD4282DB0)
 #define C0_RVBADDR_HI_ADDR          (0xD4282DB4)
 

@@ -38,18 +38,26 @@ static void wakeup_other_core(void)
     int i;
     u32 hartid, clusterid, cluster_enabled = 0;
 
+#ifdef CONFIG_PLATFORM_SPACEMIT_K1X
+    unsigned int cur_hartid = current_hartid();
+    struct sbi_scratch *scratch = sbi_hartid_to_scratch(cur_hartid);
+
+    /* set other cpu's boot-entry */
+    writel(scratch->warmboot_addr & 0xffffffff, (u32 *)C0_RVBADDR_LO_ADDR);
+    writel((scratch->warmboot_addr >> 32) & 0xffffffff, (u32 *)C0_RVBADDR_HI_ADDR);
+#endif
+
     // hart0 is already boot up
     for (i = 1; i < platform.hart_count; i++) {
         hartid = platform.hart_index2id[i];
 
         // cluster0 had release reset
         clusterid = MPIDR_AFFLVL1_VAL(hartid);;
+        u32 coreid = MPIDR_AFFLVL0_VAL(hartid);
 
 #ifndef CONFIG_ARM_PSCI_SUPPORT
-    	u32 *cpu_reset_reg;
-	u32 coreid;
-        cpu_reset_reg = (u32 *)CPU_RESET_BASE_ADDR + clusterid;
-        coreid = MPIDR_AFFLVL0_VAL(hartid);
+#if defined(CONFIG_PLATFORM_SPACEMIT_K1PRO)
+        u32* cpu_reset_reg = (u32 *)CPU_RESET_BASE_ADDR + clusterid;
 
 	if (0 == (cluster_enabled & (1 << clusterid))) {
             cluster_enabled |= 1 << clusterid;
@@ -62,6 +70,19 @@ static void wakeup_other_core(void)
         }
 
         writel(readl(cpu_reset_reg) | 1 << (coreid + 4), cpu_reset_reg);
+#elif defined(CONFIG_PLATFORM_SPACEMIT_K1X)
+	u32 core_idx = clusterid * PLATFORM_MAX_CPUS_PER_CLUSTER + coreid;
+
+	if (0 == (cluster_enabled & (1 << clusterid))) {
+            cluster_enabled |= 1 << clusterid;
+            /* enable cci for current cluster */
+            cci_enable_snoop_dvm_reqs(clusterid);
+	}
+
+	/* de-asster other cpu */
+	if (hartid != cur_hartid)
+		writel(1 << core_idx, (u32 *)CPU_RESET_BASE_ADDR);
+#endif
 #else
 	/* we only enable snoop of cluster0 */
         if (0 == (cluster_enabled & (1 << clusterid))) {
@@ -154,6 +175,14 @@ static int spacemit_pro_final_init(bool cold_boot, const struct fdt_match *match
     return 0;
 }
 
+static bool spacemit_cold_boot_allowed(u32 hartid, const struct fdt_match *match)
+{
+	/* enable core snoop */
+	csr_set(CSR_ML2SETUP, 1 << (hartid % PLATFORM_MAX_CPUS_PER_CLUSTER));
+
+	return ((hartid == 0) ? true : false);
+}
+
 static const struct fdt_match spacemit_pro_match[] = {
 	{ .compatible = "spacemit,k1-pro" },
 	{ .compatible = "spacemit,k1x" },
@@ -164,4 +193,5 @@ const struct platform_override spacemit_pro = {
 	.match_table = spacemit_pro_match,
 	.early_init = spacemit_pro_early_init,
 	.final_init = spacemit_pro_final_init,
+	.cold_boot_allowed = spacemit_cold_boot_allowed,
 };
