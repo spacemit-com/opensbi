@@ -20,5 +20,10 @@ libsbiutils-objs-$(CONFIG_ARM_PSCI_SUPPORT) += psci/psci_off.o
 libsbiutils-objs-$(CONFIG_ARM_PSCI_SUPPORT) += psci/spacemit/spacemit_topology.o
 
 ifeq ($(CONFIG_ARM_NON_SCMI_SUPPORT), y)
-libsbiutils-objs-$(CONFIG_PLATFORM_SPACEMIT_K1X) += psci/spacemit/plat/k1x/plat_pm.o
+
+# common
+libsbiutils-objs-$(CONFIG_ARM_NON_SCMI_SUPPORT) += psci/spacemit/plat/plat_pm.o
+
+# platform
+libsbiutils-objs-$(CONFIG_PLATFORM_SPACEMIT_K1X) += psci/spacemit/plat/k1x/underly_implement.o
 endif

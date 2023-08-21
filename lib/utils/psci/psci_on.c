@@ -189,7 +189,6 @@ void psci_cpu_on_finish(unsigned int cpu_idx, const psci_power_state_t *state_in
          * changed.
          */
         psci_plat_pm_ops->pwr_domain_on_finish(state_info);
-       	csi_enable_dcache();
 
 	/*
          * Arch. management: Enable data cache and manage stack memory

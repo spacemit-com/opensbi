@@ -53,9 +53,9 @@ static void wakeup_other_core(void)
 
         // cluster0 had release reset
         clusterid = MPIDR_AFFLVL1_VAL(hartid);;
-        u32 coreid = MPIDR_AFFLVL0_VAL(hartid);
 
 #ifndef CONFIG_ARM_PSCI_SUPPORT
+        u32 coreid = MPIDR_AFFLVL0_VAL(hartid);
 #if defined(CONFIG_PLATFORM_SPACEMIT_K1PRO)
         u32* cpu_reset_reg = (u32 *)CPU_RESET_BASE_ADDR + clusterid;
 
