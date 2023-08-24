@@ -12,6 +12,7 @@
 #include <sbi_utils/psci/plat/arm/common/arm_def.h>
 #include <sbi_utils/psci/plat/arm/css/common/css_pm.h>
 #include <sbi_utils/psci/drivers/arm/css/css_scp.h>
+#include <sbi_utils/psci/plat/arm/common/plat_arm.h>
 
 /* Allow CSS platforms to override `plat_arm_psci_pm_ops` */
 #pragma weak plat_arm_psci_pm_ops
@@ -129,6 +130,134 @@ void css_pwr_down_wfi(const psci_power_state_t *target_state)
 	}
 }
 
+/*
+ * The system power domain suspend is only supported only via
+ * PSCI SYSTEM_SUSPEND API. PSCI CPU_SUSPEND request to system power domain
+ * will be downgraded to the lower level.
+ */
+static int css_validate_power_state(unsigned int power_state,
+                            psci_power_state_t *req_state)
+{
+        int rc;
+
+        rc = arm_validate_power_state(power_state, req_state);
+
+        /*
+         * Ensure that we don't overrun the pwr_domain_state array in the case
+         * where the platform supported max power level is less than the system
+         * power level
+         */
+
+#if (PLAT_MAX_PWR_LVL == CSS_SYSTEM_PWR_DMN_LVL)
+
+        /*
+         * Ensure that the system power domain level is never suspended
+         * via PSCI CPU SUSPEND API. Currently system suspend is only
+         * supported via PSCI SYSTEM SUSPEND API.
+         */
+
+        req_state->pwr_domain_state[CSS_SYSTEM_PWR_DMN_LVL] =
+                                                        ARM_LOCAL_STATE_RUN;
+#endif
+
+        return rc;
+}
+
+/*******************************************************************************
+ * Handler called when the CPU power domain is about to enter standby.
+ ******************************************************************************/
+void css_cpu_standby(plat_local_state_t cpu_state)
+{
+        /* unsigned int scr; */
+
+        if (cpu_state != ARM_LOCAL_STATE_RET) {
+		sbi_printf("%s:%d\n", __func__, __LINE__);
+		sbi_hart_hang();
+	}
+
+#if 0
+        scr = read_scr_el3();
+        /*
+         * Enable the Non secure interrupt to wake the CPU.
+         * In GICv3 affinity routing mode, the non secure group1 interrupts use
+         * the PhysicalFIQ at EL3 whereas in GICv2, it uses the PhysicalIRQ.
+         * Enabling both the bits works for both GICv2 mode and GICv3 affinity
+         * routing mode.
+         */
+        write_scr_el3(scr | SCR_IRQ_BIT | SCR_FIQ_BIT);
+        isb();
+        dsb();
+        wfi();
+
+        /*
+         * Restore SCR to the original value, synchronisation of scr_el3 is
+         * done by eret while el3_exit to save some execution cycles.
+         */
+        write_scr_el3(scr);
+#endif
+}
+
+/*******************************************************************************
+ * Handler called when a power domain is about to be suspended. The
+ * target_state encodes the power state that each level should transition to.
+ ******************************************************************************/
+void css_pwr_domain_suspend(const psci_power_state_t *target_state)
+{
+        /*
+         * CSS currently supports retention only at cpu level. Just return
+         * as nothing is to be done for retention.
+         */
+        if (CSS_CORE_PWR_STATE(target_state) == ARM_LOCAL_STATE_RET)
+                return;
+
+
+        if (CSS_CORE_PWR_STATE(target_state) != ARM_LOCAL_STATE_OFF) {
+		sbi_printf("%s:%d\n", __func__, __LINE__);
+		sbi_hart_hang();
+	}
+
+        css_power_down_common(target_state);
+
+        /* Perform system domain state saving if issuing system suspend */
+        if (css_system_pwr_state(target_state) == ARM_LOCAL_STATE_OFF) {
+                /* arm_system_pwr_domain_save(); */
+
+                /* Power off the Redistributor after having saved its context */
+                /* plat_arm_gic_redistif_off(); */
+        }
+
+        css_scp_suspend(target_state);
+}
+
+/*******************************************************************************
+ * Handler called when a power domain has just been powered on after
+ * having been suspended earlier. The target_state encodes the low power state
+ * that each level has woken up from.
+ * TODO: At the moment we reuse the on finisher and reinitialize the secure
+ * context. Need to implement a separate suspend finisher.
+ ******************************************************************************/
+void css_pwr_domain_suspend_finish(
+                                const psci_power_state_t *target_state)
+{
+        /* Return as nothing is to be done on waking up from retention. */
+        if (CSS_CORE_PWR_STATE(target_state) == ARM_LOCAL_STATE_RET)
+                return;
+
+        /* Perform system domain restore if woken up from system suspend */
+        if (css_system_pwr_state(target_state) == ARM_LOCAL_STATE_OFF)
+                /*
+                 * At this point, the Distributor must be powered on to be ready
+                 * to have its state restored. The Redistributor will be powered
+                 * on as part of gicv3_rdistif_init_restore.
+                 */
+                /* arm_system_pwr_domain_resume() */;
+
+        css_pwr_domain_on_finisher_common(target_state);
+
+        /* Enable the gic cpu interface */
+        /* plat_arm_gic_cpuif_enable() */;
+}
+
 /*******************************************************************************
  * Export the platform handlers via plat_arm_psci_pm_ops. The ARM Standard
  * platform will take care of registering the handlers with PSCI.
@@ -139,4 +268,8 @@ plat_psci_ops_t plat_arm_psci_pm_ops = {
 	.pwr_domain_on_finish_late = css_pwr_domain_on_finish_late,
 	.pwr_domain_off		= css_pwr_domain_off,
 	.pwr_domain_pwr_down_wfi = css_pwr_down_wfi,
+	.validate_power_state = css_validate_power_state,
+	.cpu_standby            = css_cpu_standby,
+	.pwr_domain_suspend     = css_pwr_domain_suspend,
+	.pwr_domain_suspend_finish      = css_pwr_domain_suspend_finish,
 };

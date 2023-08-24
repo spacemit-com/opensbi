@@ -266,6 +266,17 @@ void psci_set_cpu_local_state(plat_local_state_t state)
 	svc_cpu_data->local_state = state;
 }
 
+void psci_set_suspend_pwrlvl(unsigned int target_lvl)
+{
+	psci_cpu_data_t *svc_cpu_data;
+	unsigned int hartid = current_hartid();
+	struct sbi_scratch *scratch = sbi_hartid_to_scratch(hartid);
+
+	svc_cpu_data = sbi_scratch_offset_ptr(scratch, psci_delta_off);
+
+	svc_cpu_data->target_pwrlvl = target_lvl;
+}
+
 static inline plat_local_state_t psci_get_cpu_local_state_by_idx(
                 unsigned int idx)
 {
@@ -580,6 +591,12 @@ void psci_warmboot_entrypoint(void)
 
 	cpu_idx = plat_core_pos_by_mpidr(hartid);
 
+	/* if we resumed directly from CPU-non-ret because of the wakeup source in suspending process */
+	if (psci_get_cpu_local_state() == PSCI_LOCAL_STATE_RUN) {
+		/* sbi_printf("%s:%d\n", __func__, __LINE__); */
+		return;
+	}
+
         /*
          * Verify that we have been explicitly turned ON or resumed from
          * suspend.
@@ -626,7 +643,7 @@ void psci_warmboot_entrypoint(void)
         if (psci_get_aff_info_state() == AFF_STATE_ON_PENDING)
                 psci_cpu_on_finish(cpu_idx, &state_info);
         else
-                /* psci_cpu_suspend_finish(cpu_idx, &state_info) */;
+                psci_cpu_suspend_finish(cpu_idx, &state_info);
 
         /*
          * Set the requested and target state of this CPU and all the higher
@@ -735,4 +752,117 @@ void psci_do_state_coordination(unsigned int end_pwrlvl,
 
         /* Update the target state in the power domain nodes */
         psci_set_target_local_pwr_states(end_pwrlvl, state_info);
+}
+
+/******************************************************************************
+ * This function ensures that the power state parameter in a CPU_SUSPEND request
+ * is valid. If so, it returns the requested states for each power level.
+ *****************************************************************************/
+int psci_validate_power_state(unsigned int power_state,
+                              psci_power_state_t *state_info)
+{
+        /* Check SBZ bits in power state are zero */
+        if (psci_check_power_state(power_state) != 0U)
+                return PSCI_E_INVALID_PARAMS;
+
+        if (psci_plat_pm_ops->validate_power_state == NULL) {
+		sbi_printf("%s:%d\n", __func__, __LINE__);
+		sbi_hart_hang();
+	}
+
+        /* Validate the power_state using platform pm_ops */
+        return psci_plat_pm_ops->validate_power_state(power_state, state_info);
+}
+
+/******************************************************************************
+ * This functions finds the level of the highest power domain which will be
+ * placed in a low power state during a suspend operation.
+ *****************************************************************************/
+unsigned int psci_find_target_suspend_lvl(const psci_power_state_t *state_info)
+{
+        int i;
+
+        for (i = (int) PLAT_MAX_PWR_LVL; i >= (int) PSCI_CPU_PWR_LVL; i--) {
+                if (is_local_state_run(state_info->pwr_domain_state[i]) == 0)
+                        return (unsigned int) i;
+        }
+
+        return PSCI_INVALID_PWR_LVL;
+}
+
+/******************************************************************************
+ * This function validates a suspend request by making sure that if a standby
+ * state is requested then no power level is turned off and the highest power
+ * level is placed in a standby/retention state.
+ *
+ * It also ensures that the state level X will enter is not shallower than the
+ * state level X + 1 will enter.
+ *
+ * This validation will be enabled only for DEBUG builds as the platform is
+ * expected to perform these validations as well.
+ *****************************************************************************/
+int psci_validate_suspend_req(const psci_power_state_t *state_info,
+                              unsigned int is_power_down_state)
+{
+        unsigned int max_off_lvl, target_lvl, max_retn_lvl;
+        plat_local_state_t state;
+        plat_local_state_type_t req_state_type, deepest_state_type;
+        int i;
+
+        /* Find the target suspend power level */
+        target_lvl = psci_find_target_suspend_lvl(state_info);
+        if (target_lvl == PSCI_INVALID_PWR_LVL)
+                return PSCI_E_INVALID_PARAMS;
+
+        /* All power domain levels are in a RUN state to begin with */
+        deepest_state_type = STATE_TYPE_RUN;
+
+        for (i = (int) target_lvl; i >= (int) PSCI_CPU_PWR_LVL; i--) {
+                state = state_info->pwr_domain_state[i];
+                req_state_type = find_local_state_type(state);
+
+                /*
+                 * While traversing from the highest power level to the lowest,
+                 * the state requested for lower levels has to be the same or
+                 * deeper i.e. equal to or greater than the state at the higher
+                 * levels. If this condition is true, then the requested state
+                 * becomes the deepest state encountered so far.
+                 */
+                if (req_state_type < deepest_state_type)
+                        return PSCI_E_INVALID_PARAMS;
+                deepest_state_type = req_state_type;
+        }
+
+        /* Find the highest off power level */
+        max_off_lvl = psci_find_max_off_lvl(state_info);
+
+        /* The target_lvl is either equal to the max_off_lvl or max_retn_lvl */
+        max_retn_lvl = PSCI_INVALID_PWR_LVL;
+        if (target_lvl != max_off_lvl)
+                max_retn_lvl = target_lvl;
+
+        /*
+         * If this is not a request for a power down state then max off level
+         * has to be invalid and max retention level has to be a valid power
+         * level.
+         */
+        if ((is_power_down_state == 0U) &&
+                        ((max_off_lvl != PSCI_INVALID_PWR_LVL) ||
+                         (max_retn_lvl == PSCI_INVALID_PWR_LVL)))
+                return PSCI_E_INVALID_PARAMS;
+
+        return PSCI_E_SUCCESS;
+}
+
+void riscv_pwr_state_to_psci(unsigned int rstate, unsigned int *pstate)
+{
+	*pstate = 0;
+
+	/* suspend ? */
+	if (rstate & (1 << RSTATE_TYPE_SHIFT))
+		*pstate |= (1 << PSTATE_TYPE_SHIFT);
+
+	/* cluster ? */
+	if (rstate & (PSTATE_PWR_LVL_MASK << RSTATE_PWR_LVL_SHIFT))
+		*pstate |= (rstate & (PSTATE_PWR_LVL_MASK << RSTATE_PWR_LVL_SHIFT));
 }

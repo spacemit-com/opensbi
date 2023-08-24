@@ -8,7 +8,7 @@ static const unsigned char plat_power_domain_tree_desc[] = {
 	/* No of children for the first cluster node */
         SPACEMIT_CLUSTER0_CORE_COUNT,
 	/* No of children for the second cluster node */
-	/* SPACEMIT_CLUSTER1_CORE_COUNT, */
+	SPACEMIT_CLUSTER1_CORE_COUNT,
 };
 
 int plat_core_pos_by_mpidr(u_register_t mpidr)

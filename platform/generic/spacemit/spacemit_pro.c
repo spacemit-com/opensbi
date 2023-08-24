@@ -12,12 +12,15 @@
 #include <sbi/sbi_const.h>
 #include <sbi/sbi_hart.h>
 #include <sbi/sbi_hartmask.h>
+#include <sbi/riscv_atomic.h>
 #include <sbi/sbi_platform.h>
 #include <sbi_utils/fdt/fdt_helper.h>
 #include <sbi_utils/psci/psci_lib.h>
 #include <sbi_utils/cci/cci.h>
 #include <sbi/sbi_hsm.h>
+#include <sbi/sbi_ecall_interface.h>
 #include <sbi_utils/psci/psci.h>
+#include <sbi/sbi_scratch.h>
 #include <sbi_utils/cache/cacheflush.h>
 #include <../../../lib/utils/psci/psci_private.h>
 #include <sbi_utils/psci/plat/arm/common/plat_arm.h>
@@ -142,12 +145,14 @@ static int spacemit_hart_stop(void)
 
 static int spacemit_hart_suspend(unsigned int suspend_type)
 {
+	psci_cpu_suspend(suspend_type, 0, 0);
+
 	return 0;
 }
 
 static void spacemit_hart_resume(void)
 {
-
+	psci_warmboot_entrypoint();
 }
 
 static const struct sbi_hsm_device spacemit_hsm_ops = {
@@ -179,6 +184,10 @@ static bool spacemit_cold_boot_allowed(u32 hartid, const struct fdt_match *match
 {
 	/* enable core snoop */
 	csr_set(CSR_ML2SETUP, 1 << (hartid % PLATFORM_MAX_CPUS_PER_CLUSTER));
+
+	/* dealing with resuming process */
+	if ((__sbi_hsm_hart_get_state(hartid) == SBI_HSM_STATE_SUSPENDED) && (hartid == 0))
+		return false;
 
 	return ((hartid == 0) ? true : false);
 }

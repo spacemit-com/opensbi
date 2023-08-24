@@ -55,6 +55,14 @@ __ALWAYS_STATIC_INLINE uintptr_t  __get_CurrentSP(void)
     return (result);
 }
 
+__ALWAYS_STATIC_INLINE uintptr_t  __get_Supervisor_isr(void)
+{
+    uintptr_t result;
+
+    asm volatile("csrr %0, mip" : "=r"(result));
+
+    return (result & 0x222);
+}
 /**
   \brief   D-Cache Clean by address
   \details Cleans D-Cache for the given address

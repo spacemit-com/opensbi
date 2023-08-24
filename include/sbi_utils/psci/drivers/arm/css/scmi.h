@@ -54,6 +54,24 @@
 #define SYS_PWR_ATTR_SUSPEND_SHIFT              30
 #define SCMI_SYS_PWR_SUSPEND_SUPPORTED          (1 << SYS_PWR_ATTR_SUSPEND_SHIFT)
 
+/*
+ * Macros to describe the bit-fields of the `flags` parameter of system power
+ * domain protocol SYSTEM_POWER_STATE_SET message.
+ */
+#define SYS_PWR_SET_GRACEFUL_REQ_SHIFT          0
+#define SCMI_SYS_PWR_GRACEFUL_REQ               (1 << SYS_PWR_SET_GRACEFUL_REQ_SHIFT)
+#define SCMI_SYS_PWR_FORCEFUL_REQ               (0 << SYS_PWR_SET_GRACEFUL_REQ_SHIFT)
+
+/*
+ * Macros to describe the `system_state` parameter of system power
+ * domain protocol SYSTEM_POWER_STATE_SET message.
+ */
+#define SCMI_SYS_PWR_SHUTDOWN                   0x0
+#define SCMI_SYS_PWR_COLD_RESET                 0x1
+#define SCMI_SYS_PWR_WARM_RESET                 0x2
+#define SCMI_SYS_PWR_POWER_UP                   0x3
+#define SCMI_SYS_PWR_SUSPEND                    0x4
+
 /* SCMI Error code definitions */
 #define SCMI_E_QUEUED                   1
 #define SCMI_E_SUCCESS                  0
@@ -112,5 +130,12 @@ int scmi_proto_version(void *p, uint32_t proto_id, uint32_t *version);
 int scmi_proto_msg_attr(void *p, uint32_t proto_id, uint32_t command_id,
                                                 uint32_t *attr);
 scmi_channel_plat_info_t *plat_css_get_scmi_info(unsigned int channel_id);
+
+/*
+ * System power management protocol commands. Refer SCMI specification for more
+ * details on these commands.
+ */
+int scmi_sys_pwr_state_set(void *p, uint32_t flags, uint32_t system_state);
+int scmi_sys_pwr_state_get(void *p, uint32_t *system_state);
 
 #endif

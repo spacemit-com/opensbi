@@ -40,6 +40,12 @@
 #define SCMI_PWR_STATE_SET_MSG_LEN              16
 #define SCMI_PWR_STATE_SET_RESP_LEN             8
 
+#define SCMI_SYS_PWR_STATE_SET_MSG_LEN          12
+#define SCMI_SYS_PWR_STATE_SET_RESP_LEN         8
+
+#define SCMI_SYS_PWR_STATE_GET_MSG_LEN          4
+#define SCMI_SYS_PWR_STATE_GET_RESP_LEN         12
+
 /* SCMI mailbox flags */
 #define SCMI_FLAG_RESP_POLL     0
 #define SCMI_FLAG_RESP_INT      1

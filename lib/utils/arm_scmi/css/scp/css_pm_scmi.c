@@ -324,3 +324,87 @@ const plat_psci_ops_t *css_scmi_override_pm_ops(plat_psci_ops_t *ops)
 
 	return ops;
 }
+
+/*
+ * Helper function to suspend a CPU power domain and its parent power domains
+ * if applicable.
+ */
+void css_scp_suspend(const struct psci_power_state *target_state)
+{
+        int ret;
+	unsigned int curr_hart = current_hartid();
+
+	unsigned int core_pos = plat_core_pos_by_mpidr(curr_hart);
+        if (core_pos >= PLATFORM_CORE_COUNT) {
+                sbi_printf("%s:%d, node_idx beyond the boundary\n",
+                                __func__, __LINE__);
+                sbi_hart_hang();
+        }
+
+
+        /* At least power domain level 0 should be specified to be suspended */
+        if (target_state->pwr_domain_state[ARM_PWR_LVL0] !=
+                                                ARM_LOCAL_STATE_OFF) {
+		sbi_printf("%s:%d\n", __func__, __LINE__);
+		sbi_hart_hang();
+	}
+
+        /* Check if power down at system power domain level is requested */
+        if (css_system_pwr_state(target_state) == ARM_LOCAL_STATE_OFF) {
+                /* Issue SCMI command for SYSTEM_SUSPEND on all SCMI channels */
+                ret = scmi_sys_pwr_state_set(
+                                scmi_handles[default_scmi_channel_id],
+                                SCMI_SYS_PWR_FORCEFUL_REQ, SCMI_SYS_PWR_SUSPEND);
+                if (ret != SCMI_E_SUCCESS) {
+			sbi_printf("SCMI system power domain suspend return 0x%x unexpected\n",
+                                        ret);
+                        sbi_hart_hang();
+                }
+                return;
+        }
+
+        unsigned int lvl, channel_id, domain_id;
+        uint32_t scmi_pwr_state = 0;
+        /*
+         * If we reach here, then assert that power down at system power domain
+         * level is running.
+         */
+        if (css_system_pwr_state(target_state) != ARM_LOCAL_STATE_RUN) {
+		sbi_printf("%s:%d\n", __func__, __LINE__);
+		sbi_hart_hang();
+	}
+
+        /* For level 0, specify `scmi_power_state_sleep` as the power state */
+        SCMI_SET_PWR_STATE_LVL(scmi_pwr_state, ARM_PWR_LVL0,
+                                                scmi_power_state_sleep);
+
+        for (lvl = ARM_PWR_LVL1; lvl <= PLAT_MAX_PWR_LVL; lvl++) {
+                if (target_state->pwr_domain_state[lvl] == ARM_LOCAL_STATE_RUN)
+                        break;
+
+                if (target_state->pwr_domain_state[lvl] !=
+                                                        ARM_LOCAL_STATE_OFF) {
+			sbi_printf("%s:%d\n", __func__, __LINE__);
+			sbi_hart_hang();
+		}
+                /*
+                 * Specify `scmi_power_state_off` as power state for higher
+                 * levels.
+                 */
+                SCMI_SET_PWR_STATE_LVL(scmi_pwr_state, lvl,
+                                                scmi_power_state_off);
+        }
+
+        SCMI_SET_PWR_STATE_MAX_PWR_LVL(scmi_pwr_state, lvl - 1);
+
+        css_scp_core_pos_to_scmi_channel(core_pos,
+                        &domain_id, &channel_id);
+        ret = scmi_pwr_state_set(scmi_handles[channel_id],
+                domain_id, scmi_pwr_state);
+
+        if (ret != SCMI_E_SUCCESS) {
+                sbi_printf("SCMI set power state command return 0x%x unexpected\n",
+                                ret);
+                sbi_hart_hang();
+        }
+}

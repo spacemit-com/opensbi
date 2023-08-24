@@ -15,6 +15,8 @@ libsbiutils-objs-$(CONFIG_ARM_SCMI_PROTOCOL_SUPPORT) += arm_scmi/css/scmi/scmi_c
 
 libsbiutils-objs-$(CONFIG_ARM_SCMI_PROTOCOL_SUPPORT) += arm_scmi/css/scmi/scmi_pwr_dmn_proto.o
 
+libsbiutils-objs-$(CONFIG_ARM_SCMI_PROTOCOL_SUPPORT) += arm_scmi/css/scmi/scmi_sys_pwr_proto.o
+
 libsbiutils-objs-$(CONFIG_ARM_SCMI_PROTOCOL_SUPPORT) += arm_scmi/css/scp/css_pm_scmi.o
 
 libsbiutils-objs-$(CONFIG_ARM_SCMI_PROTOCOL_SUPPORT) += arm_scmi/css/mhu/css_mhu_doorbell.o

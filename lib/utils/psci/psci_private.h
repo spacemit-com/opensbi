@@ -115,10 +115,35 @@ void psci_set_aff_info_state_by_idx(unsigned int idx, aff_info_state_t aff_state
 void psci_set_cpu_local_state(plat_local_state_t state);
 void psci_set_pwr_domains_to_run(unsigned int end_pwrlvl);
 
+void psci_get_target_local_pwr_states(unsigned int end_pwrlvl,
+                                      psci_power_state_t *target_state);
+
 void psci_do_state_coordination(unsigned int end_pwrlvl,
                                 psci_power_state_t *state_info);
 
 int plat_core_pos_by_mpidr(u_register_t mpidr);
+int psci_validate_power_state(unsigned int power_state,
+                              psci_power_state_t *state_info);
+int psci_validate_suspend_req(const psci_power_state_t *state_info,
+                              unsigned int is_power_down_state);
+unsigned int psci_find_max_off_lvl(const psci_power_state_t *state_info);
+unsigned int psci_find_target_suspend_lvl(const psci_power_state_t *state_info);
+
+void psci_set_suspend_pwrlvl(unsigned int target_lvl);
+/* Private exported functions from psci_suspend.c */
+int psci_cpu_suspend_start(/* const entry_point_info_t *ep */ uintptr_t entrypoint,
+                           unsigned int end_pwrlvl,
+                           psci_power_state_t *state_info,
+                           unsigned int is_power_down_state);
+void psci_cpu_suspend_finish(unsigned int cpu_idx, const psci_power_state_t *state_info);
+void riscv_pwr_state_to_psci(unsigned int rstate, unsigned int *pstate);
+
+/* Helper function to identify a CPU standby request in PSCI Suspend call */
+static inline bool is_cpu_standby_req(unsigned int is_power_down_state,
+                                      unsigned int retn_lvl)
+{
+        return (is_power_down_state == 0U) && (retn_lvl == 0U);
+}
 
 static inline void psci_do_pwrup_cache_maintenance(uintptr_t scratch)
 {
@@ -136,10 +161,8 @@ static inline void psci_do_pwrup_cache_maintenance(uintptr_t scratch)
 static inline void psci_disable_core_snoop(void)
 {
 	unsigned int hartid = current_hartid();
-	unsigned int core_id = MPIDR_AFFLVL1_VAL(hartid) * PLATFORM_MAX_CPUS_PER_CLUSTER
-		+ MPIDR_AFFLVL0_VAL(hartid);
 
-	csr_clear(0x7f0, core_id);
+	csr_clear(CSR_ML2SETUP, 1 << (hartid % PLATFORM_MAX_CPUS_PER_CLUSTER));
 }
 
 static inline void psci_do_pwrdown_cache_maintenance(uintptr_t scratch)
@@ -173,7 +196,6 @@ static inline void psci_do_pwrdown_cache_maintenance(uintptr_t scratch)
 /* psci cpu */
 int psci_cpu_on_start(u_register_t target, uintptr_t entrypoint);
 void psci_cpu_on_finish(unsigned int cpu_idx, const psci_power_state_t *state_info);
-
 int psci_do_cpu_off(unsigned int end_pwrlvl);
 
 #endif

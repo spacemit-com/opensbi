@@ -117,6 +117,29 @@ typedef struct psci_cpu_data {
 #define HW_OFF          1
 #define HW_STANDBY      2
 
+#define PSTATE_ID_SHIFT         (0U)
+#define PSTATE_VALID_MASK       (0xFCFE0000U)
+#define PSTATE_TYPE_SHIFT       (16U)
+#define PSTATE_PWR_LVL_SHIFT    (24U)
+#define PSTATE_ID_MASK          (0xffffU)
+#define PSTATE_PWR_LVL_MASK     (0x3U)
+
+#define psci_get_pstate_pwrlvl(pstate)  (((pstate) >> PSTATE_PWR_LVL_SHIFT) & \
+                                        PSTATE_PWR_LVL_MASK)
+#define psci_make_powerstate(state_id, type, pwrlvl) \
+                        (((state_id) & PSTATE_ID_MASK) << PSTATE_ID_SHIFT) |\
+                        (((type) & PSTATE_TYPE_MASK) << PSTATE_TYPE_SHIFT) |\
+                        (((pwrlvl) & PSTATE_PWR_LVL_MASK) << PSTATE_PWR_LVL_SHIFT)
+
+#define PSTATE_TYPE_STANDBY     (0x0U)
+#define PSTATE_TYPE_POWERDOWN   (0x1U)
+#define PSTATE_TYPE_MASK        (0x1U)
+
+/* RISCV suspend power state */
+#define RSTATE_TYPE_SHIFT	(31U)
+#define RSTATE_PWR_LVL_SHIFT	(24U)
+#define RSTATE_COMMON_SHIFT	(28U)
+
 /*****************************************************************************
  * This data structure defines the representation of the power state parameter
  * for its exchange between the generic PSCI code and the platform port. For
@@ -131,13 +154,6 @@ typedef struct psci_power_state {
          * for the CPU.
          */
         plat_local_state_t pwr_domain_state[PLAT_MAX_PWR_LVL + 1U ];
-#if PSCI_OS_INIT_MODE
-        /*
-         * The highest power level at which the current CPU is the last running
-         * CPU.
-         */
-        unsigned int last_at_pwrlvl;
-#endif
 } psci_power_state_t;
 
 /*
@@ -157,6 +173,23 @@ static inline int is_local_state_off(unsigned int plat_local_state)
                 (plat_local_state <= PLAT_MAX_OFF_STATE)) ? 1 : 0;
 }
 
+/* Power state helper functions */
+
+static inline unsigned int psci_check_power_state(unsigned int power_state)
+{
+        return ((power_state) & PSTATE_VALID_MASK);
+}
+
+static inline unsigned int psci_get_pstate_id(unsigned int power_state)
+{
+        return ((power_state) >> PSTATE_ID_SHIFT) & PSTATE_ID_MASK;
+}
+
+static inline unsigned int psci_get_pstate_type(unsigned int power_state)
+{
+        return ((power_state) >> PSTATE_TYPE_SHIFT) & PSTATE_TYPE_MASK;
+}
+
 /*******************************************************************************
  * Structure populated by platform specific code to export routines which
  * perform common low level power management functions
@@ -168,11 +201,7 @@ typedef struct plat_psci_ops {
         int (*pwr_domain_off_early)(const psci_power_state_t *target_state);
         void (*pwr_domain_suspend_pwrdown_early)(
                                 const psci_power_state_t *target_state);
-#if PSCI_OS_INIT_MODE
-        int (*pwr_domain_suspend)(const psci_power_state_t *target_state);
-#else
         void (*pwr_domain_suspend)(const psci_power_state_t *target_state);
-#endif
         void (*pwr_domain_on_finish)(const psci_power_state_t *target_state);
         void (*pwr_domain_on_finish_late)(
                                 const psci_power_state_t *target_state);
@@ -203,5 +232,6 @@ typedef struct plat_psci_ops {
 int psci_cpu_on(u_register_t target_cpu, uintptr_t entrypoint);
 int psci_cpu_off(void);
 int psci_affinity_info(u_register_t target_affinity, unsigned int lowest_affinity_level);
+int psci_cpu_suspend(unsigned int power_state, uintptr_t entrypoint, u_register_t context_id);
 
 #endif

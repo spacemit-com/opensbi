@@ -59,7 +59,6 @@ bool sbi_hsm_hart_change_state(struct sbi_scratch *scratch, long oldstate,
 
 int __sbi_hsm_hart_get_state(u32 hartid)
 {
-#ifndef CONFIG_ARM_PSCI_SUPPORT
 	struct sbi_hsm_data *hdata;
 	struct sbi_scratch *scratch;
 
@@ -69,9 +68,6 @@ int __sbi_hsm_hart_get_state(u32 hartid)
 
 	hdata = sbi_scratch_offset_ptr(scratch, hart_data_offset);
 	return atomic_read(&hdata->state);
-#else
-	return psci_affinity_info(hartid, 0);
-#endif
 }
 
 int sbi_hsm_hart_get_state(const struct sbi_domain *dom, u32 hartid)
@@ -81,6 +77,21 @@ int sbi_hsm_hart_get_state(const struct sbi_domain *dom, u32 hartid)
 
 	return __sbi_hsm_hart_get_state(hartid);
 }
+
+#ifdef CONFIG_ARM_PSCI_SUPPORT
+int __sbi_hsm_hart_get_psci_state(u32 hartid)
+{
+	return psci_affinity_info(hartid, 0);
+}
+
+int sbi_hsm_hart_get_psci_state(const struct sbi_domain *dom, u32 hartid)
+{
+	if (!sbi_domain_is_assigned_hart(dom, hartid))
+		return SBI_EINVAL;
+
+	return __sbi_hsm_hart_get_psci_state(hartid);
+}
+#endif
 
 /*
  * Try to acquire the ticket for the given target hart to make sure only
@@ -184,6 +195,7 @@ static void sbi_hsm_hart_wait(struct sbi_scratch *scratch, u32 hartid)
 {
 	struct sbi_hsm_data *hdata = sbi_scratch_offset_ptr(scratch,
 							    hart_data_offset);
+
 	while (atomic_read(&hdata->state) != SBI_HSM_STATE_START_PENDING);
 }
 #else

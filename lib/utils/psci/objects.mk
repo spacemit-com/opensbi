@@ -17,10 +17,11 @@ libsbiutils-objs-$(CONFIG_ARM_PSCI_SUPPORT) += psci/psci_on.o
 
 libsbiutils-objs-$(CONFIG_ARM_PSCI_SUPPORT) += psci/psci_off.o
 
+libsbiutils-objs-${CONFIG_ARM_PSCI_SUPPORT} += psci/psci_suspend.o
+
 libsbiutils-objs-$(CONFIG_ARM_PSCI_SUPPORT) += psci/spacemit/spacemit_topology.o
 
 ifeq ($(CONFIG_ARM_NON_SCMI_SUPPORT), y)
-
 # common
 libsbiutils-objs-$(CONFIG_ARM_NON_SCMI_SUPPORT) += psci/spacemit/plat/plat_pm.o
 

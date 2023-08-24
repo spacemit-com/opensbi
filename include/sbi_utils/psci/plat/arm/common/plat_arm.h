@@ -15,4 +15,7 @@ const plat_psci_ops_t *plat_arm_psci_override_pm_ops(plat_psci_ops_t *ops);
 
 void plat_arm_pwrc_setup(void);
 
+int arm_validate_power_state(unsigned int power_state,
+                            psci_power_state_t *req_state);
+
 #endif
