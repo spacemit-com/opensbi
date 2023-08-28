@@ -32,6 +32,7 @@
 #define SPACEMIT_CLUSTER_COUNT			1U
 #define SPACEMIT_CLUSTER0_CORE_COUNT		4U
 #define SPACEMIT_CLUSTER1_CORE_COUNT		0U
+#define PLATFORM_MAX_CPUS_PER_CLUSTER		4U
 
 /***************************psci pwr level********************/
 /* This is the power level corresponding to a CPU */

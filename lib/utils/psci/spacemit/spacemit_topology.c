@@ -16,7 +16,7 @@ int plat_core_pos_by_mpidr(u_register_t mpidr)
 	unsigned int cluster = MPIDR_AFFLVL1_VAL(mpidr);
 	unsigned int core = MPIDR_AFFLVL0_VAL(mpidr);
 
-	return cluster * PLATFORM_MAX_CPUS_PER_CLUSTER + core;
+	return cluster * SPACEMIT_CLUSTER0_CORE_COUNT + core;
 }
 
 const unsigned char *plat_get_power_domain_tree_desc(void)
