@@ -94,20 +94,6 @@ typedef struct psci_cpu_data {
  */
 #define PSCI_INVALID_PWR_LVL    (PLAT_MAX_PWR_LVL + 1U)
 
-#define PLATFORM_CLUSTER_COUNT	SPACEMIT_CLUSTER_COUNT
-
-#define PLATFORM_CORE_COUNT	(PLATFORM_CLUSTER_COUNT * \
-					SPACEMIT_CLUSTER0_CORE_COUNT)
-
-#define PLAT_NUM_PWR_DOMAINS	(ARM_SYSTEM_COUNT + \
-				SPACEMIT_CLUSTER_COUNT + \
-					PLATFORM_CORE_COUNT)
-
-#define PSCI_NUM_PWR_DOMAINS		PLAT_NUM_PWR_DOMAINS
-
-#define PSCI_NUM_NON_CPU_PWR_DOMAINS    (PSCI_NUM_PWR_DOMAINS - \
-                                         PLATFORM_CORE_COUNT)
-
 /*
  * These are the power states reported by PSCI_NODE_HW_STATE API for the
  * specified CPU. The definitions of these states can be found in Section 5.15.3

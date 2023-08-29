@@ -5,6 +5,7 @@
 #include <sbi_utils/psci/psci.h>
 #include <sbi_utils/psci/plat/arm/common/arm_def.h>
 #include <sbi_utils/psci/plat/arm/board/spacemit/include/platform_def.h>
+#include <spacemit/spacemit_config.h>
 
 #define SCMI_DOMAIN_ID_MASK             0xFFFFU
 #define SCMI_CHANNEL_ID_MASK            0xFFFFU
@@ -30,6 +31,6 @@ static inline unsigned int css_system_pwr_state(const psci_power_state_t *state)
 #endif
 }
 
-extern const uint32_t plat_css_core_pos_to_scmi_dmn_id_map[];
+extern uint32_t plat_css_core_pos_to_scmi_dmn_id_map[PLATFORM_CLUSTER_COUNT][PLATFORM_CORE_COUNT];
 
 #endif

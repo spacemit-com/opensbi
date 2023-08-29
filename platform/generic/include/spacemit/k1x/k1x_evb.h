@@ -29,11 +29,24 @@
 #define PLAT_SCMI_DOMAIN_MAP		{0, 1, 2, 3}
 
 /*************************cpu topology************************/
-#define ARM_SYSTEM_COUNT			1U
-#define SPACEMIT_CLUSTER_COUNT			1U
-#define SPACEMIT_CLUSTER0_CORE_COUNT		4U
-#define SPACEMIT_CLUSTER1_CORE_COUNT		0U
-#define PLATFORM_MAX_CPUS_PER_CLUSTER		4U
+#define ARM_SYSTEM_COUNT		(1U)
+/* this is the max cluster count of this platform */
+#define PLATFORM_CLUSTER_COUNT		(2U)
+/* this is the max core count of this platform */
+#define PLATFORM_CORE_COUNT		(8U)
+/* this is the max NUN CPU power domains */
+#define PSCI_NUM_NON_CPU_PWR_DOMAINS	(3U)
+/* this is the max cpu cores per cluster*/
+#define PLATFORM_MAX_CPUS_PER_CLUSTER	(4U)
+
+#define CLUSTER_INDEX_IN_CPU_TOPOLOGY	(1U)
+#define CLUSTER0_INDEX_IN_CPU_TOPOLOGY	(2U)
+#define CLUSTER1_INDEX_IN_CPU_TOPOLOGY	(3U)
+
+#define PSCI_NUM_PWR_DOMAINS	\
+	(ARM_SYSTEM_COUNT + plat_get_power_domain_tree_desc()[CLUSTER_INDEX_IN_CPU_TOPOLOGY] \
+	 + plat_get_power_domain_tree_desc()[CLUSTER0_INDEX_IN_CPU_TOPOLOGY] + \
+	 plat_get_power_domain_tree_desc()[CLUSTER1_INDEX_IN_CPU_TOPOLOGY])
 
 /***************************psci pwr level********************/
 /* This is the power level corresponding to a CPU */

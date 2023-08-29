@@ -24,6 +24,7 @@
 #include <sbi_utils/cache/cacheflush.h>
 #include <../../../lib/utils/psci/psci_private.h>
 #include <sbi_utils/psci/plat/arm/common/plat_arm.h>
+#include <sbi_utils/psci/plat/common/platform.h>
 #include <spacemit/spacemit_config.h>
 
 extern struct sbi_platform platform;
@@ -40,6 +41,7 @@ static void wakeup_other_core(void)
 {
     int i;
     u32 hartid, clusterid, cluster_enabled = 0;
+    unsigned char *cpu_topology;
 
 #ifdef CONFIG_PLATFORM_SPACEMIT_K1X
     unsigned int cur_hartid = current_hartid();
@@ -48,53 +50,33 @@ static void wakeup_other_core(void)
     /* set other cpu's boot-entry */
     writel(scratch->warmboot_addr & 0xffffffff, (u32 *)C0_RVBADDR_LO_ADDR);
     writel((scratch->warmboot_addr >> 32) & 0xffffffff, (u32 *)C0_RVBADDR_HI_ADDR);
+
+    writel(scratch->warmboot_addr & 0xffffffff, (u32 *)C1_RVBADDR_LO_ADDR);
+    writel((scratch->warmboot_addr >> 32) & 0xffffffff, (u32 *)C1_RVBADDR_HI_ADDR);
 #endif
+
+    cpu_topology = plat_get_power_domain_tree_desc();
 
     // hart0 is already boot up
-    for (i = 1; i < platform.hart_count; i++) {
+    for (i = 0; i < platform.hart_count; i++) {
         hartid = platform.hart_index2id[i];
 
-        // cluster0 had release reset
         clusterid = MPIDR_AFFLVL1_VAL(hartid);;
 
-#ifndef CONFIG_ARM_PSCI_SUPPORT
-        u32 coreid = MPIDR_AFFLVL0_VAL(hartid);
-#if defined(CONFIG_PLATFORM_SPACEMIT_K1PRO)
-        u32* cpu_reset_reg = (u32 *)CPU_RESET_BASE_ADDR + clusterid;
-
-	if (0 == (cluster_enabled & (1 << clusterid))) {
-            cluster_enabled |= 1 << clusterid;
-
-            if (0 != clusterid)
-                // de-assert cluster 1 APB, L2C, PIC, ACEM/LLP
-                writel(readl(cpu_reset_reg) | 0x0F, cpu_reset_reg);
-            /* enable cci for current cluster */
-            cci_enable_snoop_dvm_reqs(clusterid);
-        }
-
-        writel(readl(cpu_reset_reg) | 1 << (coreid + 4), cpu_reset_reg);
-#elif defined(CONFIG_PLATFORM_SPACEMIT_K1X)
-	u32 core_idx = clusterid * PLATFORM_MAX_CPUS_PER_CLUSTER + coreid;
-
-	if (0 == (cluster_enabled & (1 << clusterid))) {
-            cluster_enabled |= 1 << clusterid;
-            /* enable cci for current cluster */
-            cci_enable_snoop_dvm_reqs(clusterid);
-	}
-
-	/* de-asster other cpu */
-	if (hartid != cur_hartid)
-		writel(1 << core_idx, (u32 *)CPU_RESET_BASE_ADDR);
-#endif
-#else
 	/* we only enable snoop of cluster0 */
         if (0 == (cluster_enabled & (1 << clusterid))) {
             cluster_enabled |= 1 << clusterid;
             if (0 == clusterid) {
 		cci_enable_snoop_dvm_reqs(clusterid);
 	    }
+	    cpu_topology[CLUSTER_INDEX_IN_CPU_TOPOLOGY]++;
 	}
-#endif
+
+	/* we only support 2 cluster by now */
+	if (clusterid == PLATFORM_CLUSTER_COUNT - 1)
+		cpu_topology[CLUSTER1_INDEX_IN_CPU_TOPOLOGY]++;
+	else
+		cpu_topology[CLUSTER0_INDEX_IN_CPU_TOPOLOGY]++;
     }
 }
 
@@ -117,8 +99,6 @@ static int spacemit_pro_early_init(bool cold_boot, const struct fdt_match *match
     } else {
 #ifdef CONFIG_ARM_PSCI_SUPPORT
 	psci_warmboot_entrypoint();
-#else
-	csi_enable_dcache();
 #endif
     }
 

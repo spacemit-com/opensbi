@@ -1,14 +1,14 @@
 #include <sbi_utils/psci/psci.h>
 
-static const unsigned char plat_power_domain_tree_desc[] = {
+static unsigned char plat_power_domain_tree_desc[] = {
 	/* No of root nodes */
-        ARM_SYSTEM_COUNT,
-	/* No of children for the root node */
-        SPACEMIT_CLUSTER_COUNT,
-	/* No of children for the first cluster node */
-        SPACEMIT_CLUSTER0_CORE_COUNT,
-	/* No of children for the second cluster node */
-	SPACEMIT_CLUSTER1_CORE_COUNT,
+	1,
+	/* Num of children for the root node */
+	0,
+	/* Num of children for the first cluster node */
+	0,
+	/* Num of children for the second cluster node */
+	0,
 };
 
 int plat_core_pos_by_mpidr(u_register_t mpidr)
@@ -16,10 +16,11 @@ int plat_core_pos_by_mpidr(u_register_t mpidr)
 	unsigned int cluster = MPIDR_AFFLVL1_VAL(mpidr);
 	unsigned int core = MPIDR_AFFLVL0_VAL(mpidr);
 
-	return cluster * SPACEMIT_CLUSTER0_CORE_COUNT + core;
+	return (cluster == 0) ? core : 
+		(plat_power_domain_tree_desc[2] + core);
 }
 
-const unsigned char *plat_get_power_domain_tree_desc(void)
+unsigned char *plat_get_power_domain_tree_desc(void)
 {
         return plat_power_domain_tree_desc;
 }

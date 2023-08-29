@@ -35,5 +35,7 @@ scmi_channel_plat_info_t *plat_css_get_scmi_info(unsigned int channel_id)
  * The array mapping platform core position (implemented by plat_my_core_pos())
  * to the SCMI power domain ID implemented by SCP.
  */
-const uint32_t plat_css_core_pos_to_scmi_dmn_id_map[PLATFORM_CORE_COUNT] = PLAT_SCMI_DOMAIN_MAP;
-
+uint32_t plat_css_core_pos_to_scmi_dmn_id_map[PLATFORM_CLUSTER_COUNT][PLATFORM_CORE_COUNT] = {
+	PLAT_SCMI_SINGLE_CLUSTER_DOMAIN_MAP,
+	PLAT_SCMI_DOUBLE_CLUSTER_DOMAIN_MAP
+};

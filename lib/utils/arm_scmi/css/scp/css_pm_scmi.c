@@ -14,6 +14,7 @@
 #include <sbi_utils/psci/plat/arm/css/common/css_pm.h>
 #include <sbi_utils/psci/plat/arm/common/arm_def.h>
 #include <sbi_utils/psci/plat/arm/board/spacemit/include/platform_def.h>
+#include <sbi_utils/psci/plat/common/platform.h>
 #include <../../../psci/psci_private.h>
 
 /*
@@ -94,8 +95,11 @@ static void css_scp_core_pos_to_scmi_channel(unsigned int core_pos,
 		unsigned int *scmi_domain_id, unsigned int *scmi_channel_id)
 {
 	unsigned int composite_id;
+	unsigned int *map_id = plat_get_power_domain_tree_desc()[CLUSTER_INDEX_IN_CPU_TOPOLOGY] > 1 ? 
+		plat_css_core_pos_to_scmi_dmn_id_map[1] :
+		plat_css_core_pos_to_scmi_dmn_id_map[0];
 
-	composite_id = plat_css_core_pos_to_scmi_dmn_id_map[core_pos];
+	composite_id = map_id[core_pos];
 
 	*scmi_channel_id = GET_SCMI_CHANNEL_ID(composite_id);
 	*scmi_domain_id = GET_SCMI_DOMAIN_ID(composite_id);
@@ -266,7 +270,11 @@ void plat_arm_pwrc_setup(void)
 		}
 	}
 
-	composite_id = plat_css_core_pos_to_scmi_dmn_id_map[cpu_idx];
+	unsigned int *map_id = plat_get_power_domain_tree_desc()[CLUSTER_INDEX_IN_CPU_TOPOLOGY] > 1 ? 
+		plat_css_core_pos_to_scmi_dmn_id_map[1] :
+		plat_css_core_pos_to_scmi_dmn_id_map[0];
+
+	composite_id = map_id[cpu_idx];
 	default_scmi_channel_id = GET_SCMI_CHANNEL_ID(composite_id);
 }
 
