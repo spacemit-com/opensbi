@@ -182,9 +182,8 @@ void __noreturn sbi_hsm_hart_start_finish(struct sbi_scratch *scratch,
 	 * let the second hart can view the data
 	 * */
 	if (cool_boot) {
-	       csi_dcache_clean_invalid_range((uintptr_t)_data_start, _data_end - _data_start);
-	       csi_dcache_clean_invalid_range((uintptr_t)_bss_start, _bss_end - _bss_start);
-	       csi_dcache_clean_invalid_range((uintptr_t)(scratch), SBI_SCRATCH_SIZE);
+		csi_flush_dcache_all();
+		csi_flush_l2_cache();
 	}
 
 	sbi_hart_switch_mode(hartid, next_arg1, next_addr, next_mode, false);

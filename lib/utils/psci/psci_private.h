@@ -147,12 +147,8 @@ static inline bool is_cpu_standby_req(unsigned int is_power_down_state,
 
 static inline void psci_do_pwrup_cache_maintenance(uintptr_t scratch)
 {
-	unsigned long sp;
-
-	/* invalidate the used sp */
-	sp = __get_CurrentSP();
-
-	csi_dcache_invalid_range(sp, scratch - sp);
+	/* invalidate local cache */
+	csi_invalidate_dcache_all();
 
 	/* enable dcache */
 	csi_enable_dcache();
@@ -165,10 +161,8 @@ static inline void psci_disable_core_snoop(void)
 	csr_clear(CSR_ML2SETUP, 1 << (hartid % PLATFORM_MAX_CPUS_PER_CLUSTER));
 }
 
-static inline void psci_do_pwrdown_cache_maintenance(uintptr_t scratch)
+static inline void psci_do_pwrdown_cache_maintenance(int hartid, uintptr_t scratch, int power_level)
 {
-	uintptr_t sp;
-
 	/* disable the data preftch */
 	csi_disable_data_preftch();
 
@@ -178,19 +172,14 @@ static inline void psci_do_pwrdown_cache_maintenance(uintptr_t scratch)
 	/* flush dacache all */
 	csi_flush_dcache_all();
 
+	if (power_level >= PSCI_CPU_PWR_LVL + 1) {
+		csi_flush_l2_cache();
+	}
+
 	/* disable core snoop */
 	psci_disable_core_snoop();
 
 	asm volatile ("fence iorw, iorw");
-
-	sp = __get_CurrentSP();
-
-	/* flush the used sp */
-	csi_dcache_clean_invalid_range(sp, scratch - sp);
-	
-	/* invalid unused sp */
-	csi_dcache_invalid_range((scratch - SBI_PLATFORM_DEFAULT_HART_STACK_SIZE),
-			(sp + SBI_PLATFORM_DEFAULT_HART_STACK_SIZE - scratch));
 }
 
 /* psci cpu */

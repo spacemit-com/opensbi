@@ -9,6 +9,9 @@
 #include <sbi/riscv_asm.h>
 #include <sbi_utils/psci/psci.h>
 #include <sbi_utils/cci/cci.h>
+#include <sbi/riscv_encoding.h>
+#include <sbi/sbi_scratch.h>
+#include <sbi_utils/irqchip/fdt_irqchip_plic.h>
 #include <sbi_utils/psci/plat/arm/common/arm_def.h>
 #include <sbi_utils/psci/plat/arm/css/common/css_pm.h>
 #include <sbi_utils/psci/drivers/arm/css/css_scp.h>
@@ -106,6 +109,23 @@ static void css_power_down_common(const psci_power_state_t *target_state)
 		clusterid = MPIDR_AFFLVL1_VAL(hartid);
 		cci_disable_snoop_dvm_reqs(clusterid);
 	}
+}
+
+static int css_pwr_domain_off_early(const psci_power_state_t *target_state)
+{
+	/* the ipi's pending is cleared before */
+	/* disable the plic irq */
+	fdt_plic_context_exit();
+	/* clear the external irq pending */
+	csr_clear(CSR_MIP, MIP_MEIP);
+	csr_clear(CSR_MIP, MIP_SEIP);
+
+	/* here we clear the sstimer pending if this core have */
+	if (sbi_hart_has_extension(sbi_scratch_thishart_ptr(), SBI_HART_EXT_SSTC)) {
+		csr_write(CSR_STIMECMP, 0xffffffffffffffff);
+	}
+
+	return 0;
 }
 
 /*******************************************************************************
@@ -267,6 +287,7 @@ plat_psci_ops_t plat_arm_psci_pm_ops = {
 	.pwr_domain_on_finish	= css_pwr_domain_on_finish,
 	.pwr_domain_on_finish_late = css_pwr_domain_on_finish_late,
 	.pwr_domain_off		= css_pwr_domain_off,
+	.pwr_domain_off_early	= css_pwr_domain_off_early,
 	.pwr_domain_pwr_down_wfi = css_pwr_down_wfi,
 	.validate_power_state = css_validate_power_state,
 	.cpu_standby            = css_cpu_standby,

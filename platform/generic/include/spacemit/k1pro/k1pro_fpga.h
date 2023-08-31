@@ -19,7 +19,6 @@
 /***************************cpu******************************/
 #define CPU_RESET_BASE_ADDR         (0x2F024000)
 
-
 /***************************mailbox***************************/
 #define SCMI_MAILBOX_SHARE_MEM		(0x2f902080)
 #define PLAT_MAILBOX_REG_BASE		(0x2f824000)
@@ -58,5 +57,12 @@
 #define MPIDR_AFFINITY1_MASK		0xfU
 #define MPIDR_AFF0_SHIFT		0U
 #define MPIDR_AFF1_SHIFT		2U
+
+/**************************cluster power domain***************/
+#define CLUSTER0_L2_CACHE_FLUSH_REG_BASE	(0x2F804504)
+#define CLUSTER1_L2_CACHE_FLUSH_REG_BASE	(0x2F804514)
+
+#define L2_CACHE_FLUSH_REQUEST_BIT_OFFSET	(0x0)
+#define L2_CACHE_FLUSH_DONE_BIT_OFFSET	L2_CACHE_FLUSH_REQUEST_BIT_OFFSET
 
 #endif /* __K1PRO_FPGA_CONFIG_H__ */

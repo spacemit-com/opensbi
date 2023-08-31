@@ -7,28 +7,32 @@
 
 #define C1_CPU_RESET_BASE_ADDR		(0xD4282B24)
 
-#define PMU_CAP_IDLE_CFG_BASE_ADDR	(0xd4282924)
+#define PMU_CAP_CORE0_IDLE_CFG		(0xd4282924)
+#define PMU_CAP_CORE1_IDLE_CFG		(0xd4282928)
+#define PMU_CAP_CORE2_IDLE_CFG		(0xd4282960)
+#define PMU_CAP_CORE3_IDLE_CFG		(0xd4282964)
+#define PMU_CAP_CORE4_IDLE_CFG		(0xd4282b04)
+#define PMU_CAP_CORE5_IDLE_CFG		(0xd4282b08)
+#define PMU_CAP_CORE6_IDLE_CFG		(0xd4282b0c)
+#define PMU_CAP_CORE7_IDLE_CFG		(0xd4282b10)
+
+#define PMU_C0_CAPMP_IDLE_CFG0		(0xd4282920)
+#define PMU_C0_CAPMP_IDLE_CFG1		(0xd42828e4)
+#define PMU_C0_CAPMP_IDLE_CFG2		(0xd4282950)
+#define PMU_C0_CAPMP_IDLE_CFG3		(0xd4282954)
+#define PMU_C1_CAPMP_IDLE_CFG0		(0xd4282b14)
+#define PMU_C1_CAPMP_IDLE_CFG1		(0xd4282b18)
+#define PMU_C1_CAPMP_IDLE_CFG2		(0xd4282b1c)
+#define PMU_C1_CAPMP_IDLE_CFG3		(0xd4282b20)
 
 #define CPU_PWR_DOWN_VALUE		(0x3)
+#define CLUSTER_PWR_DOWN_VALUE		(0x3)
 
 struct pmu_cap_wakeup {
 	unsigned int pmu_cap_core0_wakeup;
 	unsigned int pmu_cap_core1_wakeup;
 	unsigned int pmu_cap_core2_wakeup;
 	unsigned int pmu_cap_core3_wakeup;
-};
-
-struct pmu_cap_idle {
-	unsigned int pmu_cap_core0_idle_cfg; /* 0x124 */
-	unsigned int pmu_cap_core1_idle_cfg; /* 0x128 */
-	unsigned int reserved0[13]; /* 0x12c 0x130 0x134 0x138 0x13c 0x140 0x144 0x148 0x14c 0x150 0x154 0x158 0x15c */
-	unsigned int pmu_cap_core2_idle_cfg; /* 0x160 */
-	unsigned int pmu_cap_core3_idle_cfg; /* 0x164 */
-	unsigned int reserved1[103];
-	unsigned int pmu_cap_core4_idle_cfg; /* 0x304 */
-	unsigned int pmu_cap_core5_idle_cfg; /* 0x308 */
-	unsigned int pmu_cap_core6_idle_cfg; /* 0x30c */
-	unsigned int pmu_cap_core7_idle_cfg; /* 0x310 */
 };
 
 void spacemit_cluster_on(u_register_t mpidr)
@@ -80,44 +84,57 @@ void spacemit_assert_cpu(u_register_t mpidr)
 {
 	unsigned int target_cpu_idx;
 	unsigned int *cpu_assert_base = NULL;
-	struct pmu_cap_idle *pmu_cap_idle;
-
-	pmu_cap_idle = (struct pmu_cap_idle *)PMU_CAP_IDLE_CFG_BASE_ADDR;
+	unsigned int *cluster_assert_base = NULL;
 
 	target_cpu_idx = MPIDR_AFFLVL1_VAL(mpidr) * PLATFORM_MAX_CPUS_PER_CLUSTER
 			+ MPIDR_AFFLVL0_VAL(mpidr);
 
 	switch (target_cpu_idx) {
 		case 0:
-			cpu_assert_base = &pmu_cap_idle->pmu_cap_core0_idle_cfg;
+			cpu_assert_base = (unsigned int *)PMU_CAP_CORE0_IDLE_CFG;
+			cluster_assert_base = (unsigned int *)PMU_C0_CAPMP_IDLE_CFG0;
 			break;
 		case 1:
-			cpu_assert_base = &pmu_cap_idle->pmu_cap_core1_idle_cfg;
+			cpu_assert_base = (unsigned int *)PMU_CAP_CORE1_IDLE_CFG;
+			cluster_assert_base = (unsigned int *)PMU_C0_CAPMP_IDLE_CFG1;
 			break;
 		case 2:
-			cpu_assert_base = &pmu_cap_idle->pmu_cap_core2_idle_cfg;
+			cpu_assert_base = (unsigned int *)PMU_CAP_CORE2_IDLE_CFG;
+			cluster_assert_base = (unsigned int *)PMU_C0_CAPMP_IDLE_CFG2;
 			break;
 		case 3:
-			cpu_assert_base = &pmu_cap_idle->pmu_cap_core3_idle_cfg;
+			cpu_assert_base = (unsigned int *)PMU_CAP_CORE3_IDLE_CFG;
+			cluster_assert_base = (unsigned int *)PMU_C0_CAPMP_IDLE_CFG3;
 			break;
 		case 4:
-			cpu_assert_base = &pmu_cap_idle->pmu_cap_core4_idle_cfg;
+			cpu_assert_base = (unsigned int *)PMU_CAP_CORE4_IDLE_CFG;
+			cluster_assert_base = (unsigned int *)PMU_C1_CAPMP_IDLE_CFG0;
 			break;
 		case 5:
-			cpu_assert_base = &pmu_cap_idle->pmu_cap_core5_idle_cfg;
+			cpu_assert_base = (unsigned int *)PMU_CAP_CORE5_IDLE_CFG;
+			cluster_assert_base = (unsigned int *)PMU_C1_CAPMP_IDLE_CFG1;
 			break;
 		case 6:
-			cpu_assert_base = &pmu_cap_idle->pmu_cap_core6_idle_cfg;
+			cpu_assert_base = (unsigned int *)PMU_CAP_CORE6_IDLE_CFG;
+			cluster_assert_base = (unsigned int *)PMU_C1_CAPMP_IDLE_CFG2;
 			break;
 		case 7:
-			cpu_assert_base = &pmu_cap_idle->pmu_cap_core7_idle_cfg;
+			cpu_assert_base = (unsigned int *)PMU_CAP_CORE7_IDLE_CFG;
+			cluster_assert_base = (unsigned int *)PMU_C1_CAPMP_IDLE_CFG3;
 			break;
 	}
 
+	/* cpu vote */
 	unsigned int value = readl(cpu_assert_base);
 	value |= CPU_PWR_DOWN_VALUE;
 
 	writel(value, cpu_assert_base);
+
+	/* cluster vote */
+	value = readl(cluster_assert_base);
+	value |= CLUSTER_PWR_DOWN_VALUE;
+
+	writel(value, cluster_assert_base);
 }
 
 void spacemit_clr_cpu_idle(void)
@@ -127,42 +144,55 @@ void spacemit_clr_cpu_idle(void)
 	/* clear the idle bit */
 	unsigned int target_cpu_idx;
 	unsigned int *cpu_assert_base = NULL;
-	struct pmu_cap_idle *pmu_cap_idle;
-
-	pmu_cap_idle = (struct pmu_cap_idle *)PMU_CAP_IDLE_CFG_BASE_ADDR;
+	unsigned int *cluster_assert_base = NULL;
 
 	target_cpu_idx = MPIDR_AFFLVL1_VAL(mpidr) * PLATFORM_MAX_CPUS_PER_CLUSTER
 			+ MPIDR_AFFLVL0_VAL(mpidr);
 
 	switch (target_cpu_idx) {
 		case 0:
-			cpu_assert_base = &pmu_cap_idle->pmu_cap_core0_idle_cfg;
+			cpu_assert_base = (unsigned int *)PMU_CAP_CORE0_IDLE_CFG;
+			cluster_assert_base = (unsigned int *)PMU_C0_CAPMP_IDLE_CFG0;
 			break;
 		case 1:
-			cpu_assert_base = &pmu_cap_idle->pmu_cap_core1_idle_cfg;
+			cpu_assert_base = (unsigned int *)PMU_CAP_CORE1_IDLE_CFG;
+			cluster_assert_base = (unsigned int *)PMU_C0_CAPMP_IDLE_CFG1;
 			break;
 		case 2:
-			cpu_assert_base = &pmu_cap_idle->pmu_cap_core2_idle_cfg;
+			cpu_assert_base = (unsigned int *)PMU_CAP_CORE2_IDLE_CFG;
+			cluster_assert_base = (unsigned int *)PMU_C0_CAPMP_IDLE_CFG2;
 			break;
 		case 3:
-			cpu_assert_base = &pmu_cap_idle->pmu_cap_core3_idle_cfg;
+			cpu_assert_base = (unsigned int *)PMU_CAP_CORE3_IDLE_CFG;
+			cluster_assert_base = (unsigned int *)PMU_C0_CAPMP_IDLE_CFG3;
 			break;
 		case 4:
-			cpu_assert_base = &pmu_cap_idle->pmu_cap_core4_idle_cfg;
+			cpu_assert_base = (unsigned int *)PMU_CAP_CORE4_IDLE_CFG;
+			cluster_assert_base = (unsigned int *)PMU_C1_CAPMP_IDLE_CFG0;
 			break;
 		case 5:
-			cpu_assert_base = &pmu_cap_idle->pmu_cap_core5_idle_cfg;
+			cpu_assert_base = (unsigned int *)PMU_CAP_CORE5_IDLE_CFG;
+			cluster_assert_base = (unsigned int *)PMU_C1_CAPMP_IDLE_CFG1;
 			break;
 		case 6:
-			cpu_assert_base = &pmu_cap_idle->pmu_cap_core6_idle_cfg;
+			cpu_assert_base = (unsigned int *)PMU_CAP_CORE6_IDLE_CFG;
+			cluster_assert_base = (unsigned int *)PMU_C1_CAPMP_IDLE_CFG2;
 			break;
 		case 7:
-			cpu_assert_base = &pmu_cap_idle->pmu_cap_core7_idle_cfg;
+			cpu_assert_base = (unsigned int *)PMU_CAP_CORE7_IDLE_CFG;
+			cluster_assert_base = (unsigned int *)PMU_C1_CAPMP_IDLE_CFG3;
 			break;
 	}
 
+	/* de-vote cpu */
 	unsigned int value = readl(cpu_assert_base);
 	value &= ~CPU_PWR_DOWN_VALUE;
 
 	writel(value, cpu_assert_base);
+
+	/* de-vote cluster */
+	value = readl(cluster_assert_base);
+	value &= ~CLUSTER_PWR_DOWN_VALUE;
+
+	writel(value, cluster_assert_base);
 }

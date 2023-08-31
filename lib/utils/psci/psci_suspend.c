@@ -73,7 +73,7 @@ static void psci_suspend_to_pwrdown_start(unsigned int end_pwrlvl,
          * Flush the target power level as it might be accessed on power up with
          * Data cache disabled.
          */
-	csi_dcache_clean_invalid_range((uintptr_t)svc_cpu_data->target_pwrlvl, sizeof(unsigned int));
+	csi_dcache_clean_invalid_range((uintptr_t)&svc_cpu_data->target_pwrlvl, sizeof(unsigned int));
 
 #if 0
         /*
@@ -105,7 +105,7 @@ static void psci_suspend_to_pwrdown_start(unsigned int end_pwrlvl,
          * and the cpu-ops power down to perform from the platform.
          */
         /* psci_pwrdown_cpu(max_off_lvl); */
-	psci_do_pwrdown_cache_maintenance((uintptr_t)scratch);
+	psci_do_pwrdown_cache_maintenance(hartid, (uintptr_t)scratch, psci_find_max_off_lvl(state_info));
 }
 
 /*******************************************************************************

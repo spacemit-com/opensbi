@@ -171,7 +171,7 @@ static void psci_set_target_local_pwr_states(unsigned int end_pwrlvl,
          * Need to flush as local_state might be accessed with Data Cache
          * disabled during power on
          */
-	csi_dcache_clean_invalid_range((uintptr_t)svc_cpu_data->local_state, sizeof(plat_local_state_t));
+	csi_dcache_clean_invalid_range((uintptr_t)&svc_cpu_data->local_state, sizeof(plat_local_state_t));
 
         parent_idx = psci_cpu_pd_nodes[plat_core_pos_by_mpidr(hartid)].parent_node;
 

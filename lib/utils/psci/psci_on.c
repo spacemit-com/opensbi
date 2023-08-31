@@ -98,11 +98,12 @@ int psci_cpu_on_start(u_register_t target, uintptr_t entrypoint)
 	 * target CPUs shutdown was not seen by the current CPU's cluster. And
 	 * so the cache may contain stale data for the target CPU.
 	 */
-	csi_dcache_clean_invalid_range((uintptr_t)svc_cpu_data->aff_info_state, sizeof(aff_info_state_t));
+	csi_dcache_clean_invalid_range((uintptr_t)&svc_cpu_data->aff_info_state, sizeof(aff_info_state_t));
 
 	rc = cpu_on_validate_state(psci_get_aff_info_state_by_idx(target_idx));
-	if (rc != PSCI_E_SUCCESS)
+	if (rc != PSCI_E_SUCCESS) {
 		goto exit;
+	}
 #if 0
 	/*
 	 * Call the cpu on handler registered by the Secure Payload Dispatcher
@@ -119,7 +120,7 @@ int psci_cpu_on_start(u_register_t target, uintptr_t entrypoint)
 	 */
 	psci_set_aff_info_state_by_idx((uintptr_t)target_idx, AFF_STATE_ON_PENDING);
 
-	csi_dcache_clean_invalid_range((uintptr_t)svc_cpu_data->aff_info_state, sizeof(aff_info_state_t));
+	csi_dcache_clean_invalid_range((uintptr_t)&svc_cpu_data->aff_info_state, sizeof(aff_info_state_t));
 
 	/*
 	 * The cache line invalidation by the target CPU after setting the
@@ -135,7 +136,7 @@ int psci_cpu_on_start(u_register_t target, uintptr_t entrypoint)
 		}
 		psci_set_aff_info_state_by_idx(target_idx, AFF_STATE_ON_PENDING);
 
-		csi_dcache_clean_invalid_range((uintptr_t)svc_cpu_data->aff_info_state, sizeof(aff_info_state_t));
+		csi_dcache_clean_invalid_range((uintptr_t)&svc_cpu_data->aff_info_state, sizeof(aff_info_state_t));
 
 		if (psci_get_aff_info_state_by_idx(target_idx) !=
 		       AFF_STATE_ON_PENDING) {
@@ -158,13 +159,13 @@ int psci_cpu_on_start(u_register_t target, uintptr_t entrypoint)
 		sbi_hart_hang();
 	}
 
-	if (rc == PSCI_E_SUCCESS)
+	if (rc == PSCI_E_SUCCESS) {
 		/* Store the re-entry information for the non-secure world. */
 		/**/;
-	else {
+	} else {
 		/* Restore the state on error. */
 		psci_set_aff_info_state_by_idx(target_idx, AFF_STATE_OFF);
-		csi_dcache_clean_invalid_range((uintptr_t)svc_cpu_data->aff_info_state, sizeof(aff_info_state_t));
+		csi_dcache_clean_invalid_range((uintptr_t)&svc_cpu_data->aff_info_state, sizeof(aff_info_state_t));
 	}
 
 exit:

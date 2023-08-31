@@ -59,4 +59,11 @@
 #define MPIDR_AFF0_SHIFT		0U
 #define MPIDR_AFF1_SHIFT		2U
 
+/**************************cluster power domain***************/
+#define CLUSTER0_L2_CACHE_FLUSH_REG_BASE	(0xD84401B0)
+#define CLUSTER1_L2_CACHE_FLUSH_REG_BASE	(0xD84401B4)
+
+#define L2_CACHE_FLUSH_REQUEST_BIT_OFFSET	(0x1)
+#define L2_CACHE_FLUSH_DONE_BIT_OFFSET		(0x3)
+
 #endif /* __K1X_EVB_CONFIG_H__ */

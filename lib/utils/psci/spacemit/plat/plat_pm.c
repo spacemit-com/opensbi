@@ -2,8 +2,11 @@
 #include <sbi/riscv_asm.h>
 #include <sbi_utils/cci/cci.h>
 #include <sbi_utils/psci/psci.h>
+#include <sbi/sbi_scratch.h>
+#include <sbi/sbi_hart.h>
 #include <sbi/sbi_console.h>
 #include <sbi_utils/psci/plat/arm/common/arm_def.h>
+#include <sbi_utils/irqchip/fdt_irqchip_plic.h>
 #include "underly_implement.h"
 
 #define CORE_PWR_STATE(state) \
@@ -39,8 +42,26 @@ static void spacemit_pwr_domain_on_finish(const psci_power_state_t *target_state
          * Enable CCI coherency for this cluster.
          * No need for locks as no other cpu is active at the moment.
          */
-        if (CLUSTER_PWR_STATE(target_state) == PLAT_MAX_OFF_STATE)
+        if (CLUSTER_PWR_STATE(target_state) == PLAT_MAX_OFF_STATE) {
                 cci_enable_snoop_dvm_reqs(MPIDR_AFFLVL1_VAL(hartid));
+	}
+}
+
+static int spacemit_pwr_domain_off_early(const psci_power_state_t *target_state)
+{
+	/* the ipi's pending is cleared before */
+	/* disable the plic irq */
+	fdt_plic_context_exit();
+	/* clear the external irq pending */
+	csr_clear(CSR_MIP, MIP_MEIP);
+	csr_clear(CSR_MIP, MIP_SEIP);
+
+	/* here we clear the sstimer pending if this core have */
+	if (sbi_hart_has_extension(sbi_scratch_thishart_ptr(), SBI_HART_EXT_SSTC)) {
+		csr_write(CSR_STIMECMP, 0xffffffffffffffff);
+	}
+
+	return 0;
 }
 
 static void spacemit_pwr_domain_off(const psci_power_state_t *target_state)
@@ -71,6 +92,7 @@ static const plat_psci_ops_t spacemit_psci_ops = {
 	.cpu_standby = NULL,
 	.pwr_domain_on = spacemit_pwr_domain_on,
 	.pwr_domain_on_finish = spacemit_pwr_domain_on_finish,
+	.pwr_domain_off_early	= spacemit_pwr_domain_off_early,
 	.pwr_domain_off = spacemit_pwr_domain_off,
 	.pwr_domain_pwr_down_wfi = spacemit_pwr_domain_pwr_down_wfi,
 	.pwr_domain_on_finish_late = spacemit_pwr_domain_on_finish_late,

@@ -2,8 +2,10 @@
 #define __CACHE_FLUSH__H__
 
 #include <sbi/sbi_types.h>
+#include <sbi/riscv_io.h>
 #include <sbi/riscv_asm.h>
 #include <sbi/riscv_encoding.h>
+#include <sbi_utils/psci/psci.h>
 #include <spacemit/spacemit_config.h>
 
 #define __ALWAYS_STATIC_INLINE  __attribute__((always_inline)) static inline
@@ -134,7 +136,7 @@ static inline void csi_dcache_invalid_range (uintptr_t addr, unsigned int dsize)
 
 static inline void csi_enable_dcache(void)
 {
-    csr_set(CSR_MSETUP, 0x10073);
+	csr_set(CSR_MSETUP, 0x10073);
 }
 
 static inline void csi_disable_data_preftch(void)
@@ -150,5 +152,29 @@ static inline void csi_disable_dcache(void)
 static inline void csi_flush_dcache_all(void)
 {
 	asm volatile ("csrwi 0x7c2, 0x3");
+}
+
+static inline void csi_invalidate_dcache_all(void)
+{
+	asm volatile ("csrwi 0x7c2, 0x2");
+}
+
+static inline void csi_flush_l2_cache(void)
+{
+	unsigned int hartid = current_hartid();
+
+	uintptr_t *cr =(MPIDR_AFFLVL1_VAL(hartid) == 0) ? (uintptr_t *)CLUSTER0_L2_CACHE_FLUSH_REG_BASE :
+			(uintptr_t *)CLUSTER1_L2_CACHE_FLUSH_REG_BASE;
+
+	/* flush l2 cache */
+	writel(readl(cr) | (1 << L2_CACHE_FLUSH_REQUEST_BIT_OFFSET), cr);
+	/* k1pro */
+	if (L2_CACHE_FLUSH_REQUEST_BIT_OFFSET == L2_CACHE_FLUSH_DONE_BIT_OFFSET)
+		while (readl(cr) & (1 << L2_CACHE_FLUSH_DONE_BIT_OFFSET));
+	else /* k1x */ {
+		/* clear the request */
+		while ((readl(cr) & (1 << L2_CACHE_FLUSH_DONE_BIT_OFFSET)) == 0);
+		writel(readl(cr) & ~(1 << L2_CACHE_FLUSH_REQUEST_BIT_OFFSET), cr);
+	}
 }
 #endif

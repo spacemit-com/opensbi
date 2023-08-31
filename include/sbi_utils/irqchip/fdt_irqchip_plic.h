@@ -28,6 +28,8 @@ void fdt_plic_context_save(bool smode, u32 *enable, u32 *threshold, u32 num);
 void fdt_plic_context_restore(bool smode, const u32 *enable, u32 threshold,
 			      u32 num);
 
+void fdt_plic_context_exit(void);
+
 void thead_plic_restore(void);
 
 #endif

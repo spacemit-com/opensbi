@@ -59,4 +59,11 @@
 #define MPIDR_AFF0_SHIFT		0U
 #define MPIDR_AFF1_SHIFT		2U
 
+/**************************cluster power domain***************/
+#define CLUSTER0_L2_CACHE_FLUSH_REG_BASE	(0x2F804504)
+#define CLUSTER1_L2_CACHE_FLUSH_REG_BASE	(0x2F804514)
+
+#define L2_CACHE_FLUSH_REQUEST_BIT_OFFSET	(0x0)
+#define L2_CACHE_FLUSH_DONE_BIT_OFFSET	L2_CACHE_FLUSH_REQUEST_BIT_OFFSET
+
 #endif /* __K1PRO_QEMU_CONFIG_H__ */

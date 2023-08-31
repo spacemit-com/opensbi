@@ -117,7 +117,7 @@ int psci_do_cpu_off(unsigned int end_pwrlvl)
          * We must ensure that the stack memory is flushed out to memory before
          * we start popping from it again.
          */
-	psci_do_pwrdown_cache_maintenance((uintptr_t)scratch);
+	psci_do_pwrdown_cache_maintenance(hartid, (uintptr_t)scratch, psci_find_max_off_lvl(&state_info));
 
         /*
          * Plat. management: Perform platform specific actions to turn this
@@ -151,11 +151,11 @@ exit:
                  * update to the affinity info state prior to cache line
                  * invalidation.
                  */
-		csi_dcache_clean_invalid_range((uintptr_t)svc_cpu_data->aff_info_state, sizeof(aff_info_state_t));
+		csi_dcache_clean_invalid_range((uintptr_t)&svc_cpu_data->aff_info_state, sizeof(aff_info_state_t));
                 psci_set_aff_info_state(AFF_STATE_OFF);
                 /* psci_dsbish(); */
 		asm volatile ("fence rw, rw");
-		csi_dcache_invalid_range((uintptr_t)svc_cpu_data->aff_info_state, sizeof(aff_info_state_t));
+		csi_dcache_invalid_range((uintptr_t)&svc_cpu_data->aff_info_state, sizeof(aff_info_state_t));
 
                 if (psci_plat_pm_ops->pwr_domain_pwr_down_wfi != NULL) {
                         /* This function must not return */
