@@ -19,6 +19,9 @@
 /***************************cpu******************************/
 #define CPU_RESET_BASE_ADDR         (0x2F024000)
 
+#define CORE0_RVBADDR_LO_ADDR          (0x2f804600)
+#define CORE0_RVBADDR_HI_ADDR          (0x2f804604)
+#define CORE_RVBADDR_STEP		(0x10)
 
 /***************************mailbox***************************/
 #define SCMI_MAILBOX_SHARE_MEM		(0x2f902080)

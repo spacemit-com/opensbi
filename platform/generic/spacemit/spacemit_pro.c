@@ -31,28 +31,31 @@ extern struct sbi_platform platform;
 
 PLAT_CCI_MAP
 
-void raise_soc_performance(void)
-{
-    csr_write(CSR_MHCR, 0x10011ff);
-    csr_write(CSR_MHINT, 0x6e30c);
-}
-
 static void wakeup_other_core(void)
 {
     int i;
     u32 hartid, clusterid, cluster_enabled = 0;
     unsigned char *cpu_topology;
-
-#ifdef CONFIG_PLATFORM_SPACEMIT_K1X
     unsigned int cur_hartid = current_hartid();
     struct sbi_scratch *scratch = sbi_hartid_to_scratch(cur_hartid);
 
+#if defined(CONFIG_PLATFORM_SPACEMIT_K1X)
     /* set other cpu's boot-entry */
     writel(scratch->warmboot_addr & 0xffffffff, (u32 *)C0_RVBADDR_LO_ADDR);
     writel((scratch->warmboot_addr >> 32) & 0xffffffff, (u32 *)C0_RVBADDR_HI_ADDR);
 
     writel(scratch->warmboot_addr & 0xffffffff, (u32 *)C1_RVBADDR_LO_ADDR);
     writel((scratch->warmboot_addr >> 32) & 0xffffffff, (u32 *)C1_RVBADDR_HI_ADDR);
+#elif defined(CONFIG_PLATFORM_SPACEMIT_K1PRO)
+    for (i = 0; i < platform.hart_count; i++) {
+        hartid = platform.hart_index2id[i];
+
+	unsigned long core_index = MPIDR_AFFLVL1_VAL(hartid) * PLATFORM_MAX_CPUS_PER_CLUSTER
+	       + MPIDR_AFFLVL0_VAL(hartid);
+
+	writel(scratch->warmboot_addr & 0xffffffff, (u32 *)(CORE0_RVBADDR_LO_ADDR + core_index * CORE_RVBADDR_STEP));
+	writel((scratch->warmboot_addr >> 32) & 0xffffffff, (u32 *)(CORE0_RVBADDR_HI_ADDR + core_index * CORE_RVBADDR_STEP));
+    }
 #endif
 
     cpu_topology = plat_get_power_domain_tree_desc();
@@ -61,7 +64,7 @@ static void wakeup_other_core(void)
     for (i = 0; i < platform.hart_count; i++) {
         hartid = platform.hart_index2id[i];
 
-        clusterid = MPIDR_AFFLVL1_VAL(hartid);;
+        clusterid = MPIDR_AFFLVL1_VAL(hartid);
 
 	/* we only enable snoop of cluster0 */
         if (0 == (cluster_enabled & (1 << clusterid))) {
