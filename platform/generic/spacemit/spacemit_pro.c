@@ -35,7 +35,6 @@ static void wakeup_other_core(void)
 {
     int i;
     u32 hartid, clusterid, cluster_enabled = 0;
-    unsigned char *cpu_topology;
     unsigned int cur_hartid = current_hartid();
     struct sbi_scratch *scratch = sbi_hartid_to_scratch(cur_hartid);
 
@@ -58,7 +57,9 @@ static void wakeup_other_core(void)
     }
 #endif
 
-    cpu_topology = plat_get_power_domain_tree_desc();
+#ifdef CONFIG_ARM_PSCI_SUPPORT
+    unsigned char *cpu_topology = plat_get_power_domain_tree_desc();
+#endif
 
     // hart0 is already boot up
     for (i = 0; i < platform.hart_count; i++) {
@@ -72,14 +73,18 @@ static void wakeup_other_core(void)
             if (0 == clusterid) {
 		cci_enable_snoop_dvm_reqs(clusterid);
 	    }
+#ifdef CONFIG_ARM_PSCI_SUPPORT
 	    cpu_topology[CLUSTER_INDEX_IN_CPU_TOPOLOGY]++;
+#endif
 	}
 
+#ifdef CONFIG_ARM_PSCI_SUPPORT
 	/* we only support 2 cluster by now */
 	if (clusterid == PLATFORM_CLUSTER_COUNT - 1)
 		cpu_topology[CLUSTER1_INDEX_IN_CPU_TOPOLOGY]++;
 	else
 		cpu_topology[CLUSTER0_INDEX_IN_CPU_TOPOLOGY]++;
+#endif
     }
 }
 
