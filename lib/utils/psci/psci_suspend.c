@@ -241,7 +241,9 @@ void psci_cpu_suspend_finish(unsigned int cpu_idx, const psci_power_state_t *sta
         /* unsigned int counter_freq; */
         /* unsigned int max_off_lvl; */
 	unsigned int hartid = current_hartid();
+	psci_cpu_data_t *svc_cpu_data;
 	struct sbi_scratch *scratch = sbi_hartid_to_scratch(hartid);
+	svc_cpu_data = sbi_scratch_offset_ptr(scratch, psci_delta_off);
 
         /* Ensure we have been woken up from a suspended state */
         if ((psci_get_aff_info_state() != AFF_STATE_ON) ||
@@ -283,6 +285,7 @@ void psci_cpu_suspend_finish(unsigned int cpu_idx, const psci_power_state_t *sta
 
         /* Invalidate the suspend level for the cpu */
         psci_set_suspend_pwrlvl(PSCI_INVALID_PWR_LVL);
+	csi_dcache_clean_invalid_range((uintptr_t)&svc_cpu_data->target_pwrlvl, sizeof(unsigned int));
 
         /* PUBLISH_EVENT(psci_suspend_pwrdown_finish); */
 

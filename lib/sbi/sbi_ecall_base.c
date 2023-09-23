@@ -68,7 +68,8 @@ static int sbi_ecall_base_handler(unsigned long extid, unsigned long funcid,
 #if defined(CONFIG_PLATFORM_SPACEMIT_K1PRO) || defined(CONFIG_PLATFORM_SPACEMIT_K1X)
 	case SBI_EXT_BASE_FLUSH_CACHE_ALL:
 		csi_flush_dcache_all();
-		csi_flush_l2_cache();
+		/* there has no need to flush l2 cache here */
+		/* csi_flush_l2_cache(); */
 		break;
 #endif
 	case SBI_EXT_BASE_PROBE_EXT:

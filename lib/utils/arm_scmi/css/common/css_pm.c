@@ -145,9 +145,8 @@ void css_pwr_domain_off(const psci_power_state_t *target_state)
 
 void css_pwr_down_wfi(const psci_power_state_t *target_state)
 {
-	while (1) {
-		asm volatile ("wfi");
-	}
+	while (1)
+		wfi();
 }
 
 /*
@@ -195,6 +194,7 @@ void css_cpu_standby(plat_local_state_t cpu_state)
 		sbi_hart_hang();
 	}
 
+	wfi();
 #if 0
         scr = read_scr_el3();
         /*
@@ -237,6 +237,8 @@ void css_pwr_domain_suspend(const psci_power_state_t *target_state)
 	}
 
         css_power_down_common(target_state);
+
+	csr_clear(CSR_MIE, MIP_SSIP | MIP_MSIP | MIP_STIP | MIP_MTIP | MIP_SEIP | MIP_MEIP);
 
         /* Perform system domain state saving if issuing system suspend */
         if (css_system_pwr_state(target_state) == ARM_LOCAL_STATE_OFF) {
