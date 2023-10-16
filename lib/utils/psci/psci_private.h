@@ -63,7 +63,12 @@ typedef struct cpu_pwr_domain_node {
  * On systems where participant CPUs are cache-coherent, we can use spinlocks
  * instead of bakery locks.
  */
-#define DEFINE_PSCI_LOCK(_name)         spinlock_t _name
+typedef struct psci_spinlock_t {
+	spinlock_t lock;
+	unsigned int reserved[15];
+} _psci_spinlock_t;
+
+#define DEFINE_PSCI_LOCK(_name)         _psci_spinlock_t _name
 #define DECLARE_PSCI_LOCK(_name)        extern DEFINE_PSCI_LOCK(_name)
 
 /* One lock is required per non-CPU power domain node */
@@ -76,12 +81,12 @@ static inline void psci_lock_init(non_cpu_pd_node_t *non_cpu_pd_node, unsigned s
 
 static inline void psci_lock_get(non_cpu_pd_node_t *non_cpu_pd_node)
 {
-        spin_lock(&psci_locks[non_cpu_pd_node->lock_index]);
+        spin_lock(&psci_locks[non_cpu_pd_node->lock_index].lock);
 }
 
 static inline void psci_lock_release(non_cpu_pd_node_t *non_cpu_pd_node)
 {
-        spin_unlock(&psci_locks[non_cpu_pd_node->lock_index]);
+        spin_unlock(&psci_locks[non_cpu_pd_node->lock_index].lock);
 }
 
 /* common */
