@@ -10,6 +10,7 @@
 #include <sbi/sbi_platform.h>
 #include <sbi/sbi_hart.h>
 #include <sbi/sbi_console.h>
+#include <spacemit/spacemit_config.h>
 #include "psci_private.h"
 
 /*
@@ -29,7 +30,8 @@
  * the cache thrashing can be avoided.
  */
 static plat_local_state_t
-	psci_req_local_pwr_states[PLAT_MAX_PWR_LVL][PLATFORM_CORE_COUNT];
+	/* psci_req_local_pwr_states[PLAT_MAX_PWR_LVL][PLATFORM_CORE_COUNT] */
+	psci_req_local_pwr_states[PLAT_MAX_PWR_LVL][CACHE_LINE_SIZE] __attribute__((aligned(CACHE_LINE_SIZE)));
 
 unsigned int psci_plat_core_count;
 
@@ -45,7 +47,7 @@ unsigned long psci_delta_off;
 non_cpu_pd_node_t psci_non_cpu_pd_nodes[PSCI_NUM_NON_CPU_PWR_DOMAINS];
 
 /* Lock for PSCI state coordination */
-DEFINE_PSCI_LOCK(psci_locks[PSCI_NUM_NON_CPU_PWR_DOMAINS]) __attribute__((aligned(64)));
+DEFINE_PSCI_LOCK(psci_locks[PSCI_NUM_NON_CPU_PWR_DOMAINS]);
 
 cpu_pd_node_t psci_cpu_pd_nodes[PLATFORM_CORE_COUNT];
 
@@ -121,6 +123,9 @@ void psci_init_req_local_pwr_states(void)
 			psci_req_local_pwr_states[pwrlvl][core] =
 				PLAT_MAX_OFF_STATE;
 		}
+		csi_dcache_clean_invalid_range(
+                        (uintptr_t) psci_req_local_pwr_states[pwrlvl],
+                        CACHE_LINE_SIZE);
 	}
 }
 
@@ -145,6 +150,9 @@ void psci_set_req_local_pwr_state(unsigned int pwrlvl,
 	if ((pwrlvl > PSCI_CPU_PWR_LVL) && (pwrlvl <= PLAT_MAX_PWR_LVL) &&
 			(cpu_idx < psci_plat_core_count)) {
 		psci_req_local_pwr_states[pwrlvl - 1U][cpu_idx] = req_pwr_state;
+		csi_dcache_clean_invalid_range(
+                        (uintptr_t) psci_req_local_pwr_states[pwrlvl - 1U],
+                        CACHE_LINE_SIZE);
 	}
 }
 
@@ -537,10 +545,6 @@ plat_local_state_t plat_get_target_pwr_state(unsigned int lvl,
 static plat_local_state_t get_non_cpu_pd_node_local_state(
                 unsigned int parent_idx)
 {
-        csi_dcache_clean_invalid_range(
-                        (uintptr_t) &psci_non_cpu_pd_nodes[parent_idx],
-                        sizeof(psci_non_cpu_pd_nodes[parent_idx]));
-
         return psci_non_cpu_pd_nodes[parent_idx].local_state;
 }
 

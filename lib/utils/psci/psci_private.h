@@ -39,7 +39,7 @@ typedef struct non_cpu_pwr_domain_node {
 
 	/* For indexing the psci_lock array*/
 	unsigned short lock_index;
-} non_cpu_pd_node_t;
+} __aligned(CACHE_LINE_SIZE) non_cpu_pd_node_t;
 
 typedef struct cpu_pwr_domain_node {
 	u_register_t mpidr;
@@ -65,8 +65,7 @@ typedef struct cpu_pwr_domain_node {
  */
 typedef struct psci_spinlock_t {
 	spinlock_t lock;
-	unsigned int reserved[15];
-} _psci_spinlock_t;
+} __aligned(CACHE_LINE_SIZE) _psci_spinlock_t;
 
 #define DEFINE_PSCI_LOCK(_name)         _psci_spinlock_t _name
 #define DECLARE_PSCI_LOCK(_name)        extern DEFINE_PSCI_LOCK(_name)
@@ -171,15 +170,15 @@ static inline void psci_do_pwrdown_cache_maintenance(int hartid, uintptr_t scrat
 	/* disable the data preftch */
 	csi_disable_data_preftch();
 
-	/* disable dcache */
-	csi_disable_dcache();
-
 	/* flush dacache all */
 	csi_flush_dcache_all();
 
 	if (power_level >= PSCI_CPU_PWR_LVL + 1) {
 		csi_flush_l2_cache();
 	}
+
+	/* disable dcache */
+	csi_disable_dcache();
 
 	/* disable core snoop */
 	psci_disable_core_snoop();
