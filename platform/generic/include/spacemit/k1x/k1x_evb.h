@@ -21,6 +21,9 @@
 #define C0_RVBADDR_LO_ADDR          (0xD4282DB0)
 #define C0_RVBADDR_HI_ADDR          (0xD4282DB4)
 
+#define C1_RVBADDR_LO_ADDR          (0xD4282C00 + 0x2B0)
+#define C1_RVBADDR_HI_ADDR          (0xD4282C00 + 0X2B4)
+
 /***************************mailbox***************************/
 #define SCMI_MAILBOX_SHARE_MEM		(0x2f902080)
 #define PLAT_MAILBOX_REG_BASE		(0x2f824000)

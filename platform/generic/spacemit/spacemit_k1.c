@@ -91,7 +91,7 @@ static void wakeup_other_core(void)
 /*
  * Platform early initialization.
  */
-static int spacemit_pro_early_init(bool cold_boot, const struct fdt_match *match)
+static int spacemit_k1_early_init(bool cold_boot, const struct fdt_match *match)
 {
     if (cold_boot) {
         /* initiate cci */
@@ -155,7 +155,7 @@ static const struct sbi_hsm_device spacemit_hsm_ops = {
 /*
  * Platform final initialization.
  */
-static int spacemit_pro_final_init(bool cold_boot, const struct fdt_match *match)
+static int spacemit_k1_final_init(bool cold_boot, const struct fdt_match *match)
 {
 #ifdef CONFIG_ARM_PSCI_SUPPORT
     /* for clod boot, we build the cpu topology structure */
@@ -180,15 +180,15 @@ static bool spacemit_cold_boot_allowed(u32 hartid, const struct fdt_match *match
 	return ((hartid == 0) ? true : false);
 }
 
-static const struct fdt_match spacemit_pro_match[] = {
+static const struct fdt_match spacemit_k1_match[] = {
 	{ .compatible = "spacemit,k1-pro" },
 	{ .compatible = "spacemit,k1x" },
 	{ },
 };
 
-const struct platform_override spacemit_pro = {
-	.match_table = spacemit_pro_match,
-	.early_init = spacemit_pro_early_init,
-	.final_init = spacemit_pro_final_init,
+const struct platform_override spacemit_k1 = {
+	.match_table = spacemit_k1_match,
+	.early_init = spacemit_k1_early_init,
+	.final_init = spacemit_k1_final_init,
 	.cold_boot_allowed = spacemit_cold_boot_allowed,
 };
