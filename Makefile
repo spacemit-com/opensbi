@@ -114,6 +114,7 @@ endif
 CPP		=	$(CC) -E
 AS		=	$(CC)
 DTC		=	dtc
+MKIMAGE =   $(src_dir)/tools/mkimage
 
 ifneq ($(shell $(CC) --version 2>&1 | head -n 1 | grep clang),)
 CC_IS_CLANG	=	y
@@ -245,6 +246,7 @@ ifdef PLATFORM
 libsbiutils-objs-path-y=$(foreach obj,$(libsbiutils-objs-y),$(platform_build_dir)/lib/utils/$(obj))
 platform-objs-path-y=$(foreach obj,$(platform-objs-y),$(platform_build_dir)/$(obj))
 firmware-bins-path-y=$(foreach bin,$(firmware-bins-y),$(platform_build_dir)/firmware/$(bin))
+firmware-itb-path-y=$(foreach itb,$(firmware-itb-y),$(platform_build_dir)/firmware/$(itb))
 endif
 firmware-elfs-path-y=$(firmware-bins-path-y:.bin=.elf)
 firmware-objs-path-y=$(firmware-bins-path-y:.bin=.o)
@@ -468,12 +470,17 @@ compile_carray = $(CMD_PREFIX)mkdir -p `dirname $(1)`; \
 compile_gen_dep = $(CMD_PREFIX)mkdir -p `dirname $(1)`; \
 	     echo " GEN-DEP   $(subst $(build_dir)/,,$(1))"; \
 	     echo "$(1:.dep=$(2)): $(3)" >> $(1)
+compile_itb = $(CMD_PREFIX)$(MKIMAGE) -f auto -A riscv -O opensbi -T firmware -C none -t \
+		 -n "OpenSBI fw_dynamic Firmware" \
+		 -a $(FW_TEXT_START) -e $(FW_TEXT_START) \
+		 -d $(2) $(1)
 
 targets-y  = $(build_dir)/lib/libsbi.a
 ifdef PLATFORM
 targets-y += $(platform_build_dir)/lib/libplatsbi.a
 endif
 targets-y += $(firmware-bins-path-y)
+targets-y += $(firmware-itb-path-y)
 
 # The default "make all" rule
 .PHONY: all
@@ -578,6 +585,10 @@ $(platform_build_dir)/%.dep: $(src_dir)/%.S $(KCONFIG_CONFIG)
 
 $(platform_build_dir)/%.o: $(src_dir)/%.S
 	$(call compile_as,$@,$<)
+
+# Rules for fit image sources
+$(platform_build_dir)/%.itb: $(platform_build_dir)/%.bin
+	$(call compile_itb,$@,$<)
 
 # Rule for "make docs"
 $(build_dir)/docs/latex/refman.pdf: $(build_dir)/docs/latex/refman.tex
