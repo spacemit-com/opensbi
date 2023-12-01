@@ -146,7 +146,8 @@ int sbi_hsm_hart_interruptible_mask(const struct sbi_domain *dom,
 		if (dmask & hmask) {
 			hstate = __sbi_hsm_hart_get_state(i);
 			if (hstate == SBI_HSM_STATE_STARTED ||
-			    hstate == SBI_HSM_STATE_SUSPENDED)
+			    hstate == SBI_HSM_STATE_SUSPENDED ||
+			    hstate == SBI_HSM_STATE_RESUME_PENDING)
 				*out_hmask |= hmask;
 		}
 	}
