@@ -246,7 +246,9 @@ ifdef PLATFORM
 libsbiutils-objs-path-y=$(foreach obj,$(libsbiutils-objs-y),$(platform_build_dir)/lib/utils/$(obj))
 platform-objs-path-y=$(foreach obj,$(platform-objs-y),$(platform_build_dir)/$(obj))
 firmware-bins-path-y=$(foreach bin,$(firmware-bins-y),$(platform_build_dir)/firmware/$(bin))
-firmware-itb-path-y=$(foreach itb,$(firmware-itb-y),$(platform_build_dir)/firmware/$(itb))
+firmware-itb-path-y=$(foreach its,$(firmware-its-y),$(platform_build_dir)/firmware/$(basename $(notdir $(its))).itb)
+platform_build_itb_dir=$(patsubst %/,%,$(dir $(firstword $(firmware-itb-path-y))))
+platform_src_its_dir=$(patsubst %/,%,$(platform_src_dir)/$(dir $(firstword $(firmware-its-y))))
 endif
 firmware-elfs-path-y=$(firmware-bins-path-y:.bin=.elf)
 firmware-objs-path-y=$(firmware-bins-path-y:.bin=.o)
@@ -470,10 +472,9 @@ compile_carray = $(CMD_PREFIX)mkdir -p `dirname $(1)`; \
 compile_gen_dep = $(CMD_PREFIX)mkdir -p `dirname $(1)`; \
 	     echo " GEN-DEP   $(subst $(build_dir)/,,$(1))"; \
 	     echo "$(1:.dep=$(2)): $(3)" >> $(1)
-compile_itb = $(CMD_PREFIX)$(MKIMAGE) -f auto -A riscv -O opensbi -T firmware -C none -t \
-		 -n "OpenSBI fw_dynamic Firmware" \
-		 -a $(FW_TEXT_START) -e $(FW_TEXT_START) \
-		 -d $(2) $(1)
+compile_itb = \
+	     $(CMD_PREFIX)echo " ITB       $(subst $(build_dir)/,,$(1))"; \
+	     $(MKIMAGE) -f $(2) -r $(1)
 
 targets-y  = $(build_dir)/lib/libsbi.a
 ifdef PLATFORM
@@ -587,8 +588,9 @@ $(platform_build_dir)/%.o: $(src_dir)/%.S
 	$(call compile_as,$@,$<)
 
 # Rules for fit image sources
-$(platform_build_dir)/%.itb: $(platform_build_dir)/%.bin
-	$(call compile_itb,$@,$<)
+$(platform_build_itb_dir)/%.itb: $(platform_src_its_dir)/%.its $(firmware-bins-path-y)
+	$(call copy_file,$(dir $@)/$(notdir $<),$<)
+	$(call compile_itb,$@,$(basename $@).its)
 
 # Rule for "make docs"
 $(build_dir)/docs/latex/refman.pdf: $(build_dir)/docs/latex/refman.tex

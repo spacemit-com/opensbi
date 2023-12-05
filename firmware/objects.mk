@@ -36,10 +36,8 @@ endif
 endif
 
 firmware-bins-$(FW_DYNAMIC) += fw_dynamic.bin
-firmware-itb-$(FW_DYNAMIC) += fw_dynamic.itb
 
 firmware-bins-$(FW_JUMP) += fw_jump.bin
-firmware-itb-$(FW_JUMP) += fw_jump.itb
 ifdef FW_JUMP_ADDR
 firmware-genflags-$(FW_JUMP) += -DFW_JUMP_ADDR=$(FW_JUMP_ADDR)
 endif
@@ -48,7 +46,6 @@ firmware-genflags-$(FW_JUMP) += -DFW_JUMP_FDT_ADDR=$(FW_JUMP_FDT_ADDR)
 endif
 
 firmware-bins-$(FW_PAYLOAD) += fw_payload.bin
-firmware-itb-$(FW_PAYLOAD) += fw_payload.itb
 ifdef FW_PAYLOAD_PATH
 FW_PAYLOAD_PATH_FINAL=$(FW_PAYLOAD_PATH)
 else
