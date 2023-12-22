@@ -114,7 +114,7 @@ endif
 CPP		=	$(CC) -E
 AS		=	$(CC)
 DTC		=	dtc
-MKIMAGE =   $(src_dir)/tools/mkimage
+MKIMAGE =   mkimage
 
 ifneq ($(shell $(CC) --version 2>&1 | head -n 1 | grep clang),)
 CC_IS_CLANG	=	y
