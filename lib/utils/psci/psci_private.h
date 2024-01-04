@@ -174,6 +174,10 @@ static inline void psci_do_pwrdown_cache_maintenance(int hartid, uintptr_t scrat
 	csi_flush_dcache_all();
 
 	if (power_level >= PSCI_CPU_PWR_LVL + 1) {
+#if defined(CONFIG_PLATFORM_SPACEMIT_K1X)
+		/* disable the tcm */
+		csr_write(CSR_TCMCFG, 0);
+#endif
 		csi_flush_l2_cache();
 	}
 

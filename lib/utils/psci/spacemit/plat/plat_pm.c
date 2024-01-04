@@ -39,7 +39,15 @@ static void spacemit_pwr_domain_on_finish(const psci_power_state_t *target_state
          */
         if (CLUSTER_PWR_STATE(target_state) == PLAT_MAX_OFF_STATE) {
                 spacemit_cluster_on(hartid);
+#if defined(CONFIG_PLATFORM_SPACEMIT_K1X)
+		/* disable the tcm */
+		csr_write(CSR_TCMCFG, 0);
+#endif
                 cci_enable_snoop_dvm_reqs(MPIDR_AFFLVL1_VAL(hartid));
+#if defined(CONFIG_PLATFORM_SPACEMIT_K1X)
+		/* enable the tcm */
+		csr_write(CSR_TCMCFG, 1);
+#endif
 	}
 }
 
@@ -65,12 +73,16 @@ static void spacemit_pwr_domain_off(const psci_power_state_t *target_state)
         unsigned int hartid = current_hartid();
 
         if (CLUSTER_PWR_STATE(target_state) == PLAT_MAX_OFF_STATE) {
+#if defined(CONFIG_PLATFORM_SPACEMIT_K1X)
+		/* disable the tcm */
+		csr_write(CSR_TCMCFG, 0);
+#endif
                 cci_disable_snoop_dvm_reqs(MPIDR_AFFLVL1_VAL(hartid));
                 spacemit_cluster_off(hartid);
         }
 
 	if (SYSTEM_PWR_STATE(target_state) == ARM_LOCAL_STATE_OFF) {
-		spacemit_top_off(hartid);	
+		spacemit_top_off(hartid);
 	}
 
 	spacemit_assert_cpu(hartid);
@@ -164,6 +176,10 @@ static void spacemit_pwr_domain_suspend(const psci_power_state_t *target_state)
 	/* Cluster is to be turned off, so disable coherency */
 	if (CLUSTER_PWR_STATE(target_state) == ARM_LOCAL_STATE_OFF) {
 		clusterid = MPIDR_AFFLVL1_VAL(hartid);
+#if defined(CONFIG_PLATFORM_SPACEMIT_K1X)
+		/* disable the tcm */
+		csr_write(CSR_TCMCFG, 0);
+#endif
 		cci_disable_snoop_dvm_reqs(clusterid);
 		spacemit_cluster_off(hartid);
 	}
@@ -196,7 +212,15 @@ static void spacemit_pwr_domain_suspend_finish(const psci_power_state_t *target_
 	 */
 	if (CLUSTER_PWR_STATE(target_state) == ARM_LOCAL_STATE_OFF) {
 		clusterid = MPIDR_AFFLVL1_VAL(hartid);
+#if defined(CONFIG_PLATFORM_SPACEMIT_K1X)
+		/* disable the tcm */
+		csr_write(CSR_TCMCFG, 0);
+#endif
 		cci_enable_snoop_dvm_reqs(clusterid);
+#if defined(CONFIG_PLATFORM_SPACEMIT_K1X)
+		/* enable the tcm */
+		csr_write(CSR_TCMCFG, 1);
+#endif
 		spacemit_cluster_on(hartid);
 	}
 
