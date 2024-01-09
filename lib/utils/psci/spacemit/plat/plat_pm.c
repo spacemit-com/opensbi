@@ -170,9 +170,6 @@ static void spacemit_pwr_domain_suspend(const psci_power_state_t *target_state)
 		sbi_hart_hang();
 	}
 
-
-	csr_clear(CSR_MIE, MIP_SSIP | MIP_MSIP | MIP_STIP | MIP_MTIP | MIP_SEIP | MIP_MEIP);
-
 	/* Cluster is to be turned off, so disable coherency */
 	if (CLUSTER_PWR_STATE(target_state) == ARM_LOCAL_STATE_OFF) {
 		clusterid = MPIDR_AFFLVL1_VAL(hartid);
@@ -181,6 +178,7 @@ static void spacemit_pwr_domain_suspend(const psci_power_state_t *target_state)
 		csr_write(CSR_TCMCFG, 0);
 #endif
 		cci_disable_snoop_dvm_reqs(clusterid);
+
 		spacemit_cluster_off(hartid);
 	}
 
@@ -233,6 +231,11 @@ static void spacemit_pwr_domain_suspend_finish(const psci_power_state_t *target_
 	spacemit_deassert_cpu();
 }
 
+static void spacemit_pwr_domain_suspend_pwrdown_early(const psci_power_state_t *target_state)
+{
+	csr_clear(CSR_MIE, MIP_SSIP | MIP_MSIP | MIP_STIP | MIP_MTIP | MIP_SEIP | MIP_MEIP);
+}
+
 static const plat_psci_ops_t spacemit_psci_ops = {
 	.cpu_standby = NULL,
 	.pwr_domain_on = spacemit_pwr_domain_on,
@@ -243,6 +246,7 @@ static const plat_psci_ops_t spacemit_psci_ops = {
 	.pwr_domain_on_finish_late = spacemit_pwr_domain_on_finish_late,
 	.validate_power_state = spacemit_validate_power_state,
 	.pwr_domain_suspend = spacemit_pwr_domain_suspend,
+	.pwr_domain_suspend_pwrdown_early = spacemit_pwr_domain_suspend_pwrdown_early,
 	.pwr_domain_suspend_finish = spacemit_pwr_domain_suspend_finish,
 };
 

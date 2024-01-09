@@ -159,6 +159,14 @@ static inline void csi_invalidate_dcache_all(void)
 	asm volatile ("csrwi 0x7c2, 0x2");
 }
 
+static inline void __mdelay(void)
+{
+	unsigned long long i;
+
+	for (i = 0; i < 0xffffffff; ++i)
+		cpu_relax();
+}
+
 static inline void csi_flush_l2_cache(void)
 {
 	unsigned int hartid = current_hartid();
@@ -173,7 +181,11 @@ static inline void csi_flush_l2_cache(void)
 		while (readl(cr) & (1 << L2_CACHE_FLUSH_DONE_BIT_OFFSET));
 	else /* k1x */ {
 		/* clear the request */
-		while ((readl(cr) & (1 << L2_CACHE_FLUSH_DONE_BIT_OFFSET)) == 0);
+		while (1) {
+			if ((readl(cr) & (1 << L2_CACHE_FLUSH_DONE_BIT_OFFSET)) == 0)
+				break;
+			__mdelay();
+		}
 		writel(readl(cr) & ~(1 << L2_CACHE_FLUSH_REQUEST_BIT_OFFSET), cr);
 	}
 }
