@@ -15,6 +15,9 @@
 			load = <0x0 0x0>;
 			entry = <0x0 0x0>;
 			data = /incbin/("./fw_dynamic.bin");
+			hash-1 {
+				algo = "crc32";
+			};
 		};
 	};
 	configurations {
