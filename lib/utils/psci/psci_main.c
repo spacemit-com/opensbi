@@ -9,34 +9,32 @@
 /*******************************************************************************
  * PSCI frontend api for servicing SMCs. Described in the PSCI spec.
  ******************************************************************************/
-int psci_cpu_on(u_register_t target_cpu,
-                uintptr_t entrypoint)
-
+int psci_cpu_on(u_register_t target_cpu, uintptr_t entrypoint)
 {
-        int rc;
+	int rc;
 
-        /* Determine if the cpu exists of not */
-        rc = psci_validate_mpidr(target_cpu);
-        if (rc != PSCI_E_SUCCESS)
-                return PSCI_E_INVALID_PARAMS;
+	/* Determine if the cpu exists of not */
+	rc = psci_validate_mpidr(target_cpu);
+	if (rc != PSCI_E_SUCCESS)
+		return PSCI_E_INVALID_PARAMS;
 
-        /*
-         * To turn this cpu on, specify which power
-         * levels need to be turned on
-         */
-        return psci_cpu_on_start(target_cpu, entrypoint);
+	/*
+	 * To turn this cpu on, specify which power
+	 * levels need to be turned on
+	 */
+	return psci_cpu_on_start(target_cpu, entrypoint);
 }
 
 int psci_affinity_info(u_register_t target_affinity,
                        unsigned int lowest_affinity_level)
 {
-        int ret;
-        unsigned int target_idx;
+	int ret;
+	unsigned int target_idx;
 	psci_cpu_data_t *svc_cpu_data;
 	struct sbi_scratch *scratch = sbi_hartid_to_scratch(target_affinity);
 	svc_cpu_data = sbi_scratch_offset_ptr(scratch, psci_delta_off);
 
-        /* We dont support level higher than PSCI_CPU_PWR_LVL */
+	/* We dont support level higher than PSCI_CPU_PWR_LVL */
         if (lowest_affinity_level > PSCI_CPU_PWR_LVL)
                 return PSCI_E_INVALID_PARAMS;
 
@@ -186,3 +184,55 @@ int psci_cpu_suspend(unsigned int power_state,
 	return rc;
 }
 
+int psci_system_suspend(uintptr_t entrypoint, u_register_t context_id)
+{
+	int rc;
+	psci_power_state_t state_info;
+	/* entry_point_info_t ep; */
+
+	/* Check if the current CPU is the last ON CPU in the system */
+	if (!psci_is_last_on_cpu())
+		return PSCI_E_DENIED;
+
+	/* Validate the entry point and get the entry_point_info */
+/**
+ *	rc = psci_validate_entry_point(&ep, entrypoint, context_id);
+ *	if (rc != PSCI_E_SUCCESS)
+ *		return rc;
+ */
+
+	/* Query the psci_power_state for system suspend */
+	psci_query_sys_suspend_pwrstate(&state_info);
+
+	/*
+	 * Check if platform allows suspend to Highest power level
+	 * (System level)
+	 */
+	if (psci_find_target_suspend_lvl(&state_info) < PLAT_MAX_PWR_LVL)
+		return PSCI_E_DENIED;
+
+	/* Ensure that the psci_power_state makes sense */
+	if (psci_validate_suspend_req(&state_info, PSTATE_TYPE_POWERDOWN)
+                                                != PSCI_E_SUCCESS) {
+		sbi_printf("%s:%d\n", __func__, __LINE__);
+		sbi_hart_hang();
+	}
+
+	if (is_local_state_off(
+		state_info.pwr_domain_state[PLAT_MAX_PWR_LVL]) == 0) {
+		sbi_printf("%s:%d\n", __func__, __LINE__);
+		sbi_hart_hang();
+	}
+
+	/*
+	 * Do what is needed to enter the system suspend state. This function
+	 * might return if the power down was abandoned for any reason, e.g.
+	 * arrival of an interrupt
+	 */
+	rc = psci_cpu_suspend_start(/* &ep */entrypoint,
+				PLAT_MAX_PWR_LVL,
+				&state_info,
+				PSTATE_TYPE_POWERDOWN);
+
+        return rc;
+}

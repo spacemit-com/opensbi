@@ -31,6 +31,10 @@
 #define CPU_PWR_DOWN_VALUE		(0x3)
 #define CLUSTER_PWR_DOWN_VALUE		(0x3)
 #define CLUSTER_AXISDO_OFFSET		(31)
+#define CLUSTER_DDRSD_OFFSET		(27)
+#define CLUSTER_APBSD_OFFSET		(26)
+#define CLUSTER_VCXOSD_OFFSET		(19)
+
 
 struct pmu_cap_wakeup {
 	unsigned int pmu_cap_core0_wakeup;
@@ -39,7 +43,7 @@ struct pmu_cap_wakeup {
 	unsigned int pmu_cap_core3_wakeup;
 };
 
-/* D1P */
+/* D1P & D2 ? */
 void spacemit_top_on(u_register_t mpidr)
 {
 	unsigned int *cluster0_acpr = NULL;
@@ -49,15 +53,21 @@ void spacemit_top_on(u_register_t mpidr)
 	cluster1_acpr = (unsigned int *)PMU_ACPR_CLUSTER1_REG;
 
 	unsigned int value = readl(cluster0_acpr);
-	value &= ~(1 << CLUSTER_AXISDO_OFFSET);
+	value &= ~((1 << CLUSTER_AXISDO_OFFSET) |
+		(1 << CLUSTER_DDRSD_OFFSET) |
+		(1 << CLUSTER_APBSD_OFFSET) |
+		(1 << CLUSTER_VCXOSD_OFFSET));
 	writel(value, cluster0_acpr);
 
 	value = readl(cluster1_acpr);
-	value &= ~(1 << CLUSTER_AXISDO_OFFSET);
+	value &= ~((1 << CLUSTER_AXISDO_OFFSET) |
+		(1 << CLUSTER_DDRSD_OFFSET) |
+		(1 << CLUSTER_APBSD_OFFSET) |
+		(1 << CLUSTER_VCXOSD_OFFSET));
 	writel(value, cluster1_acpr);
 }
 
-/* D1P */
+/* D1P & D2 ? */
 void spacemit_top_off(u_register_t mpidr)
 {
 	unsigned int *cluster0_acpr = NULL;
@@ -67,11 +77,17 @@ void spacemit_top_off(u_register_t mpidr)
 	cluster1_acpr = (unsigned int *)PMU_ACPR_CLUSTER1_REG;
 
 	unsigned int value = readl(cluster0_acpr);
-	value |= (1 << CLUSTER_AXISDO_OFFSET);
+	value |= (1 << CLUSTER_AXISDO_OFFSET) |
+		(1 << CLUSTER_DDRSD_OFFSET) |
+		(1 << CLUSTER_APBSD_OFFSET) |
+		(1 << CLUSTER_VCXOSD_OFFSET);
 	writel(value, cluster0_acpr);
 
 	value = readl(cluster1_acpr);
-	value |= (1 << CLUSTER_AXISDO_OFFSET);
+	value |= (1 << CLUSTER_AXISDO_OFFSET) |
+		(1 << CLUSTER_DDRSD_OFFSET) |
+		(1 << CLUSTER_APBSD_OFFSET) |
+		(1 << CLUSTER_VCXOSD_OFFSET);
 	writel(value, cluster1_acpr);
 }
 

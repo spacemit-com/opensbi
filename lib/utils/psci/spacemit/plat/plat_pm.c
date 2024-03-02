@@ -16,6 +16,9 @@
 #define SYSTEM_PWR_STATE(state) \
         ((state)->pwr_domain_state[PLAT_MAX_PWR_LVL])
 
+/* reserved for future used */
+/* unsigned long __plic_regsave_offset_ptr; */
+
 static int spacemit_pwr_domain_on(u_register_t mpidr)
 {
 	/* wakeup the cpu */
@@ -54,8 +57,7 @@ static void spacemit_pwr_domain_on_finish(const psci_power_state_t *target_state
 static int spacemit_pwr_domain_off_early(const psci_power_state_t *target_state)
 {
 	/* the ipi's pending is cleared before */
-	/* disable the plic irq */
-	fdt_plic_context_exit();
+	csr_clear(CSR_MIE, MIP_SSIP | MIP_MSIP | MIP_STIP | MIP_MTIP | MIP_SEIP | MIP_MEIP);
 	/* clear the external irq pending */
 	csr_clear(CSR_MIP, MIP_MEIP);
 	csr_clear(CSR_MIP, MIP_SEIP);
@@ -70,9 +72,9 @@ static int spacemit_pwr_domain_off_early(const psci_power_state_t *target_state)
 
 static void spacemit_pwr_domain_off(const psci_power_state_t *target_state)
 {
-        unsigned int hartid = current_hartid();
+	unsigned int hartid = current_hartid();
 
-        if (CLUSTER_PWR_STATE(target_state) == PLAT_MAX_OFF_STATE) {
+	if (CLUSTER_PWR_STATE(target_state) == PLAT_MAX_OFF_STATE) {
 #if defined(CONFIG_PLATFORM_SPACEMIT_K1X)
 		/* disable the tcm */
 		csr_write(CSR_TCMCFG, 0);
@@ -82,11 +84,11 @@ static void spacemit_pwr_domain_off(const psci_power_state_t *target_state)
         }
 
 	if (SYSTEM_PWR_STATE(target_state) == ARM_LOCAL_STATE_OFF) {
+		/* D1P */
 		spacemit_top_off(hartid);
 	}
 
 	spacemit_assert_cpu(hartid);
-
 }
 
 static void spacemit_pwr_domain_pwr_down_wfi(const psci_power_state_t *target_state)
@@ -183,7 +185,7 @@ static void spacemit_pwr_domain_suspend(const psci_power_state_t *target_state)
 	}
 
 	if (SYSTEM_PWR_STATE(target_state) == ARM_LOCAL_STATE_OFF) {
-		/* D1P */
+		/* D1P & D2 */
 		spacemit_top_off(hartid);
 	}
 
@@ -223,7 +225,7 @@ static void spacemit_pwr_domain_suspend_finish(const psci_power_state_t *target_
 	}
 
 	if (SYSTEM_PWR_STATE(target_state) == ARM_LOCAL_STATE_OFF) {
-		/* D1P */
+		/* D1P & D2 */
 		spacemit_top_on(hartid);
 	}
 
@@ -234,6 +236,14 @@ static void spacemit_pwr_domain_suspend_finish(const psci_power_state_t *target_
 static void spacemit_pwr_domain_suspend_pwrdown_early(const psci_power_state_t *target_state)
 {
 	csr_clear(CSR_MIE, MIP_SSIP | MIP_MSIP | MIP_STIP | MIP_MTIP | MIP_SEIP | MIP_MEIP);
+}
+
+static void spacemit_get_sys_suspend_power_state(psci_power_state_t *req_state)
+{
+	int i;
+
+	for (i = MPIDR_AFFLVL0; i <= PLAT_MAX_PWR_LVL; i++)
+		req_state->pwr_domain_state[i] = PLAT_MAX_OFF_STATE;
 }
 
 static const plat_psci_ops_t spacemit_psci_ops = {
@@ -248,6 +258,7 @@ static const plat_psci_ops_t spacemit_psci_ops = {
 	.pwr_domain_suspend = spacemit_pwr_domain_suspend,
 	.pwr_domain_suspend_pwrdown_early = spacemit_pwr_domain_suspend_pwrdown_early,
 	.pwr_domain_suspend_finish = spacemit_pwr_domain_suspend_finish,
+	.get_sys_suspend_power_state = spacemit_get_sys_suspend_power_state,
 };
 
 int plat_setup_psci_ops(uintptr_t sec_entrypoint, const plat_psci_ops_t **psci_ops)

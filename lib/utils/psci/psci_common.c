@@ -870,3 +870,55 @@ void riscv_pwr_state_to_psci(unsigned int rstate, unsigned int *pstate)
 	if (rstate & (PSTATE_PWR_LVL_MASK << RSTATE_PWR_LVL_SHIFT))
 		*pstate |= (rstate & (PSTATE_PWR_LVL_MASK << RSTATE_PWR_LVL_SHIFT));
 }
+
+/*******************************************************************************
+ * This function verifies that all the other cores in the system have been
+ * turned OFF and the current CPU is the last running CPU in the system.
+ * Returns true, if the current CPU is the last ON CPU or false otherwise.
+ ******************************************************************************/
+bool psci_is_last_on_cpu(void)
+{
+	unsigned int cpu_idx;
+	unsigned int hartid = current_hartid();
+	int my_idx = plat_core_pos_by_mpidr(hartid);
+
+	for (cpu_idx = 0; cpu_idx < psci_plat_core_count; cpu_idx++) {
+		if (cpu_idx == my_idx) {
+			if (psci_get_aff_info_state() != AFF_STATE_ON) {
+				sbi_printf("%s:%d\n", __func__, __LINE__);
+				sbi_hart_hang();
+			}
+			continue;
+		}
+
+		if (psci_get_aff_info_state_by_idx(cpu_idx) != AFF_STATE_OFF) {
+			sbi_printf("core=%u other than current core=%u %s\n",
+				cpu_idx, my_idx, "running in the system");
+			return false;
+		}
+	}
+
+	return true;
+}
+
+/******************************************************************************
+ * This function retrieves the `psci_power_state_t` for system suspend from
+ * the platform.
+ *****************************************************************************/
+void psci_query_sys_suspend_pwrstate(psci_power_state_t *state_info)
+{
+	/*
+	 * Assert that the required pm_ops hook is implemented to ensure that
+	 * the capability detected during psci_setup() is valid.
+	 */
+	if (psci_plat_pm_ops->get_sys_suspend_power_state == NULL) {
+		sbi_printf("%s:%d\n", __func__, __LINE__);
+		sbi_hart_hang();
+	}
+
+	/*
+	 * Query the platform for the power_state required for system suspend
+	 */
+	psci_plat_pm_ops->get_sys_suspend_power_state(state_info);
+}
+
