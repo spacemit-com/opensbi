@@ -207,7 +207,7 @@ static int spacemit_system_suspend(u32 sleep_type, unsigned long mmode_resume_ad
 	if (sleep_type != SBI_SUSP_SLEEP_TYPE_SUSPEND)
 		return SBI_EINVAL;
 
-	/* psci_system_suspend(mmode_resume_addr, 0); */
+	psci_system_suspend(mmode_resume_addr, 0);
 
 	return SBI_OK;
 }

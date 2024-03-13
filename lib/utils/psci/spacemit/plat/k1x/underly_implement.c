@@ -27,6 +27,8 @@
 
 #define PMU_ACPR_CLUSTER0_REG		(0xd4051090)
 #define PMU_ACPR_CLUSTER1_REG		(0xd4051094)
+#define PMU_ACPR_UNKONW_REG		(0xd4050038)
+
 
 #define CPU_PWR_DOWN_VALUE		(0x3)
 #define CLUSTER_PWR_DOWN_VALUE		(0x3)
@@ -34,7 +36,11 @@
 #define CLUSTER_DDRSD_OFFSET		(27)
 #define CLUSTER_APBSD_OFFSET		(26)
 #define CLUSTER_VCXOSD_OFFSET		(19)
-
+#define CLUSTER_BIT29_OFFSET		(29)
+#define CLUSTER_BIT14_OFFSET		(14)
+#define CLUSTER_BIT30_OFFSET		(30)
+#define CLUSTER_BIT25_OFFSET		(25)
+#define CLUSTER_BIT13_OFFSET		(13)
 
 struct pmu_cap_wakeup {
 	unsigned int pmu_cap_core0_wakeup;
@@ -56,14 +62,24 @@ void spacemit_top_on(u_register_t mpidr)
 	value &= ~((1 << CLUSTER_AXISDO_OFFSET) |
 		(1 << CLUSTER_DDRSD_OFFSET) |
 		(1 << CLUSTER_APBSD_OFFSET) |
-		(1 << CLUSTER_VCXOSD_OFFSET));
+		/* (1 << CLUSTER_VCXOSD_OFFSET) | */
+		(1 << CLUSTER_BIT29_OFFSET) |
+		(1 << CLUSTER_BIT14_OFFSET) |
+		(1 << CLUSTER_BIT30_OFFSET) |
+		(1 << CLUSTER_BIT25_OFFSET) |
+		(1 << CLUSTER_BIT13_OFFSET));
 	writel(value, cluster0_acpr);
 
 	value = readl(cluster1_acpr);
 	value &= ~((1 << CLUSTER_AXISDO_OFFSET) |
 		(1 << CLUSTER_DDRSD_OFFSET) |
 		(1 << CLUSTER_APBSD_OFFSET) |
-		(1 << CLUSTER_VCXOSD_OFFSET));
+		/* (1 << CLUSTER_VCXOSD_OFFSET) | */
+		(1 << CLUSTER_BIT29_OFFSET) |
+		(1 << CLUSTER_BIT14_OFFSET) |
+		(1 << CLUSTER_BIT30_OFFSET) |
+		(1 << CLUSTER_BIT25_OFFSET) |
+		(1 << CLUSTER_BIT13_OFFSET));
 	writel(value, cluster1_acpr);
 }
 
@@ -80,15 +96,32 @@ void spacemit_top_off(u_register_t mpidr)
 	value |= (1 << CLUSTER_AXISDO_OFFSET) |
 		(1 << CLUSTER_DDRSD_OFFSET) |
 		(1 << CLUSTER_APBSD_OFFSET) |
-		(1 << CLUSTER_VCXOSD_OFFSET);
+		/* (1 << CLUSTER_VCXOSD_OFFSET) | */
+		(1 << CLUSTER_BIT29_OFFSET) |
+		(1 << CLUSTER_BIT14_OFFSET) |
+		(1 << CLUSTER_BIT30_OFFSET) |
+		(1 << CLUSTER_BIT25_OFFSET) |
+		(1 << CLUSTER_BIT13_OFFSET);
 	writel(value, cluster0_acpr);
 
 	value = readl(cluster1_acpr);
 	value |= (1 << CLUSTER_AXISDO_OFFSET) |
 		(1 << CLUSTER_DDRSD_OFFSET) |
 		(1 << CLUSTER_APBSD_OFFSET) |
-		(1 << CLUSTER_VCXOSD_OFFSET);
+		/* (1 << CLUSTER_VCXOSD_OFFSET) | */
+		(1 << CLUSTER_BIT29_OFFSET) |
+		(1 << CLUSTER_BIT14_OFFSET) |
+		(1 << CLUSTER_BIT30_OFFSET) |
+		(1 << CLUSTER_BIT25_OFFSET) |
+		(1 << CLUSTER_BIT13_OFFSET);
 	writel(value, cluster1_acpr);
+
+	value = readl((unsigned int *)PMU_ACPR_UNKONW_REG);
+	value |= (1 << 2);
+	writel(value, (unsigned int *)PMU_ACPR_UNKONW_REG);
+
+	/* for wakeup debug */
+	writel(0xffff, (unsigned int *)0xd4051030);
 }
 
 /* M2 */
