@@ -114,8 +114,7 @@ static void css_power_down_common(const psci_power_state_t *target_state)
 static int css_pwr_domain_off_early(const psci_power_state_t *target_state)
 {
 	/* the ipi's pending is cleared before */
-	/* disable the plic irq */
-	fdt_plic_context_exit();
+	csr_clear(CSR_MIE, MIP_SSIP | MIP_MSIP | MIP_STIP | MIP_MTIP | MIP_SEIP | MIP_MEIP);
 	/* clear the external irq pending */
 	csr_clear(CSR_MIP, MIP_MEIP);
 	csr_clear(CSR_MIP, MIP_SEIP);

@@ -142,6 +142,10 @@ int psci_cpu_suspend_start(/* const entry_point_info_t *ep */ uintptr_t entrypoi
 void psci_cpu_suspend_finish(unsigned int cpu_idx, const psci_power_state_t *state_info);
 void riscv_pwr_state_to_psci(unsigned int rstate, unsigned int *pstate);
 
+bool psci_is_last_on_cpu(void);
+void psci_query_sys_suspend_pwrstate(psci_power_state_t *state_info);
+int psci_system_suspend(uintptr_t entrypoint, u_register_t context_id);
+
 /* Helper function to identify a CPU standby request in PSCI Suspend call */
 static inline bool is_cpu_standby_req(unsigned int is_power_down_state,
                                       unsigned int retn_lvl)
