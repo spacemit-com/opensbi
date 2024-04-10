@@ -709,7 +709,7 @@
 #define CSR_MIPH			0x354
 
 #define CSR_TCMCFG			0x5DB
-#define CSR_FENCECFG			0xbf9
+#define CSR_FEATURECTL			0xbf9
 
 /* ===== Trap/Exception Causes ===== */
 

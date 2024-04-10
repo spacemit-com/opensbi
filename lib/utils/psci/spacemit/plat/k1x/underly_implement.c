@@ -62,7 +62,7 @@ void spacemit_top_on(u_register_t mpidr)
 	value &= ~((1 << CLUSTER_AXISDO_OFFSET) |
 		(1 << CLUSTER_DDRSD_OFFSET) |
 		(1 << CLUSTER_APBSD_OFFSET) |
-		/* (1 << CLUSTER_VCXOSD_OFFSET) | */
+		(1 << CLUSTER_VCXOSD_OFFSET) |
 		(1 << CLUSTER_BIT29_OFFSET) |
 		(1 << CLUSTER_BIT14_OFFSET) |
 		(1 << CLUSTER_BIT30_OFFSET) |
@@ -74,7 +74,7 @@ void spacemit_top_on(u_register_t mpidr)
 	value &= ~((1 << CLUSTER_AXISDO_OFFSET) |
 		(1 << CLUSTER_DDRSD_OFFSET) |
 		(1 << CLUSTER_APBSD_OFFSET) |
-		/* (1 << CLUSTER_VCXOSD_OFFSET) | */
+		(1 << CLUSTER_VCXOSD_OFFSET) |
 		(1 << CLUSTER_BIT29_OFFSET) |
 		(1 << CLUSTER_BIT14_OFFSET) |
 		(1 << CLUSTER_BIT30_OFFSET) |
@@ -96,7 +96,7 @@ void spacemit_top_off(u_register_t mpidr)
 	value |= (1 << CLUSTER_AXISDO_OFFSET) |
 		(1 << CLUSTER_DDRSD_OFFSET) |
 		(1 << CLUSTER_APBSD_OFFSET) |
-		/* (1 << CLUSTER_VCXOSD_OFFSET) | */
+		(1 << CLUSTER_VCXOSD_OFFSET) |
 		(1 << CLUSTER_BIT29_OFFSET) |
 		(1 << CLUSTER_BIT14_OFFSET) |
 		(1 << CLUSTER_BIT30_OFFSET) |
@@ -108,7 +108,7 @@ void spacemit_top_off(u_register_t mpidr)
 	value |= (1 << CLUSTER_AXISDO_OFFSET) |
 		(1 << CLUSTER_DDRSD_OFFSET) |
 		(1 << CLUSTER_APBSD_OFFSET) |
-		/* (1 << CLUSTER_VCXOSD_OFFSET) | */
+		(1 << CLUSTER_VCXOSD_OFFSET) |
 		(1 << CLUSTER_BIT29_OFFSET) |
 		(1 << CLUSTER_BIT14_OFFSET) |
 		(1 << CLUSTER_BIT30_OFFSET) |
