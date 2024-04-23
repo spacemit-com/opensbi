@@ -65,6 +65,19 @@ static void wakeup_other_core(void)
 	unsigned char *cpu_topology = plat_get_power_domain_tree_desc();
 #endif
 
+#if defined(CONFIG_PLATFORM_SPACEMIT_K1X)
+	/* enable the hw l2 cache flush method for each core */
+	writel(readl((u32 *)PMU_C0_CAPMP_IDLE_CFG0) | (1 << L2_HARDWARE_CACHE_FLUSH_EN), (u32 *)PMU_C0_CAPMP_IDLE_CFG0);
+	writel(readl((u32 *)PMU_C0_CAPMP_IDLE_CFG1) | (1 << L2_HARDWARE_CACHE_FLUSH_EN), (u32 *)PMU_C0_CAPMP_IDLE_CFG1);
+	writel(readl((u32 *)PMU_C0_CAPMP_IDLE_CFG2) | (1 << L2_HARDWARE_CACHE_FLUSH_EN), (u32 *)PMU_C0_CAPMP_IDLE_CFG2);
+	writel(readl((u32 *)PMU_C0_CAPMP_IDLE_CFG3) | (1 << L2_HARDWARE_CACHE_FLUSH_EN), (u32 *)PMU_C0_CAPMP_IDLE_CFG3);
+
+	writel(readl((u32 *)PMU_C1_CAPMP_IDLE_CFG0) | (1 << L2_HARDWARE_CACHE_FLUSH_EN), (u32 *)PMU_C1_CAPMP_IDLE_CFG0);
+	writel(readl((u32 *)PMU_C1_CAPMP_IDLE_CFG1) | (1 << L2_HARDWARE_CACHE_FLUSH_EN), (u32 *)PMU_C1_CAPMP_IDLE_CFG1);
+	writel(readl((u32 *)PMU_C1_CAPMP_IDLE_CFG2) | (1 << L2_HARDWARE_CACHE_FLUSH_EN), (u32 *)PMU_C1_CAPMP_IDLE_CFG2);
+	writel(readl((u32 *)PMU_C1_CAPMP_IDLE_CFG3) | (1 << L2_HARDWARE_CACHE_FLUSH_EN), (u32 *)PMU_C1_CAPMP_IDLE_CFG3);
+#endif
+
 	// hart0 is already boot up
 	for (i = 0; i < platform.hart_count; i++) {
 		hartid = platform.hart_index2id[i];

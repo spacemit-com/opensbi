@@ -183,7 +183,7 @@ void __noreturn sbi_hsm_hart_start_finish(struct sbi_scratch *scratch,
 	 * */
 	if (cool_boot) {
 		csi_flush_dcache_all();
-		csi_flush_l2_cache();
+		csi_flush_l2_cache(0);
 	}
 
 	sbi_hart_switch_mode(hartid, next_arg1, next_addr, next_mode, false);
