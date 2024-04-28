@@ -7,6 +7,7 @@
 #include <sbi/sbi_console.h>
 #include <sbi_utils/psci/plat/arm/common/arm_def.h>
 #include <sbi_utils/irqchip/fdt_irqchip_plic.h>
+#include <sbi_utils/cache/cacheflush.h>
 #include "underly_implement.h"
 
 #define CORE_PWR_STATE(state) \
@@ -81,6 +82,7 @@ static void spacemit_pwr_domain_off(const psci_power_state_t *target_state)
 #endif
                 cci_disable_snoop_dvm_reqs(MPIDR_AFFLVL1_VAL(hartid));
                 spacemit_cluster_off(hartid);
+		csi_flush_l2_cache(1);
         }
 
 	if (SYSTEM_PWR_STATE(target_state) == ARM_LOCAL_STATE_OFF) {
@@ -180,8 +182,8 @@ static void spacemit_pwr_domain_suspend(const psci_power_state_t *target_state)
 		csr_write(CSR_TCMCFG, 0);
 #endif
 		cci_disable_snoop_dvm_reqs(clusterid);
-
 		spacemit_cluster_off(hartid);
+		csi_flush_l2_cache(1);
 	}
 
 	if (SYSTEM_PWR_STATE(target_state) == ARM_LOCAL_STATE_OFF) {

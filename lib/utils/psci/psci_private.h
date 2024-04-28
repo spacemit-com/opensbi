@@ -182,7 +182,7 @@ static inline void psci_do_pwrdown_cache_maintenance(int hartid, uintptr_t scrat
 		/* disable the tcm */
 		csr_write(CSR_TCMCFG, 0);
 #endif
-		csi_flush_l2_cache();
+		csi_flush_l2_cache(0);
 	}
 
 	/* disable dcache */

@@ -5,43 +5,6 @@
 #include <sbi/sbi_console.h>
 #include <spacemit/spacemit_config.h>
 
-#define C1_CPU_RESET_BASE_ADDR		(0xD4282B24)
-
-#define PMU_CAP_CORE0_IDLE_CFG		(0xd4282924)
-#define PMU_CAP_CORE1_IDLE_CFG		(0xd4282928)
-#define PMU_CAP_CORE2_IDLE_CFG		(0xd4282960)
-#define PMU_CAP_CORE3_IDLE_CFG		(0xd4282964)
-#define PMU_CAP_CORE4_IDLE_CFG		(0xd4282b04)
-#define PMU_CAP_CORE5_IDLE_CFG		(0xd4282b08)
-#define PMU_CAP_CORE6_IDLE_CFG		(0xd4282b0c)
-#define PMU_CAP_CORE7_IDLE_CFG		(0xd4282b10)
-
-#define PMU_C0_CAPMP_IDLE_CFG0		(0xd4282920)
-#define PMU_C0_CAPMP_IDLE_CFG1		(0xd42828e4)
-#define PMU_C0_CAPMP_IDLE_CFG2		(0xd4282950)
-#define PMU_C0_CAPMP_IDLE_CFG3		(0xd4282954)
-#define PMU_C1_CAPMP_IDLE_CFG0		(0xd4282b14)
-#define PMU_C1_CAPMP_IDLE_CFG1		(0xd4282b18)
-#define PMU_C1_CAPMP_IDLE_CFG2		(0xd4282b1c)
-#define PMU_C1_CAPMP_IDLE_CFG3		(0xd4282b20)
-
-#define PMU_ACPR_CLUSTER0_REG		(0xd4051090)
-#define PMU_ACPR_CLUSTER1_REG		(0xd4051094)
-#define PMU_ACPR_UNKONW_REG		(0xd4050038)
-
-
-#define CPU_PWR_DOWN_VALUE		(0x3)
-#define CLUSTER_PWR_DOWN_VALUE		(0x3)
-#define CLUSTER_AXISDO_OFFSET		(31)
-#define CLUSTER_DDRSD_OFFSET		(27)
-#define CLUSTER_APBSD_OFFSET		(26)
-#define CLUSTER_VCXOSD_OFFSET		(19)
-#define CLUSTER_BIT29_OFFSET		(29)
-#define CLUSTER_BIT14_OFFSET		(14)
-#define CLUSTER_BIT30_OFFSET		(30)
-#define CLUSTER_BIT25_OFFSET		(25)
-#define CLUSTER_BIT13_OFFSET		(13)
-
 struct pmu_cap_wakeup {
 	unsigned int pmu_cap_core0_wakeup;
 	unsigned int pmu_cap_core1_wakeup;
