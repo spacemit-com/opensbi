@@ -265,6 +265,8 @@ static bool spacemit_cold_boot_allowed(u32 hartid, const struct fdt_match *match
 static const struct fdt_match spacemit_k1_match[] = {
 	{ .compatible = "spacemit,k1-pro" },
 	{ .compatible = "spacemit,k1x" },
+	{ .compatible = "spacemit,k1-x" },
+	{ .compatible = "spacemit,k1" },
 	{ },
 };
 
