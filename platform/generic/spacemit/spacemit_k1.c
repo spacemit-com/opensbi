@@ -67,15 +67,15 @@ static void wakeup_other_core(void)
 
 #if defined(CONFIG_PLATFORM_SPACEMIT_K1X)
 	/* enable the hw l2 cache flush method for each core */
-	writel(readl((u32 *)PMU_C0_CAPMP_IDLE_CFG0) | (1 << L2_HARDWARE_CACHE_FLUSH_EN), (u32 *)PMU_C0_CAPMP_IDLE_CFG0);
-	writel(readl((u32 *)PMU_C0_CAPMP_IDLE_CFG1) | (1 << L2_HARDWARE_CACHE_FLUSH_EN), (u32 *)PMU_C0_CAPMP_IDLE_CFG1);
-	writel(readl((u32 *)PMU_C0_CAPMP_IDLE_CFG2) | (1 << L2_HARDWARE_CACHE_FLUSH_EN), (u32 *)PMU_C0_CAPMP_IDLE_CFG2);
-	writel(readl((u32 *)PMU_C0_CAPMP_IDLE_CFG3) | (1 << L2_HARDWARE_CACHE_FLUSH_EN), (u32 *)PMU_C0_CAPMP_IDLE_CFG3);
+	/* writel(readl((u32 *)PMU_C0_CAPMP_IDLE_CFG0) | (1 << L2_HARDWARE_CACHE_FLUSH_EN), (u32 *)PMU_C0_CAPMP_IDLE_CFG0); */
+	/* writel(readl((u32 *)PMU_C0_CAPMP_IDLE_CFG1) | (1 << L2_HARDWARE_CACHE_FLUSH_EN), (u32 *)PMU_C0_CAPMP_IDLE_CFG1); */
+	/* writel(readl((u32 *)PMU_C0_CAPMP_IDLE_CFG2) | (1 << L2_HARDWARE_CACHE_FLUSH_EN), (u32 *)PMU_C0_CAPMP_IDLE_CFG2); */
+	/* writel(readl((u32 *)PMU_C0_CAPMP_IDLE_CFG3) | (1 << L2_HARDWARE_CACHE_FLUSH_EN), (u32 *)PMU_C0_CAPMP_IDLE_CFG3); */
 
-	writel(readl((u32 *)PMU_C1_CAPMP_IDLE_CFG0) | (1 << L2_HARDWARE_CACHE_FLUSH_EN), (u32 *)PMU_C1_CAPMP_IDLE_CFG0);
-	writel(readl((u32 *)PMU_C1_CAPMP_IDLE_CFG1) | (1 << L2_HARDWARE_CACHE_FLUSH_EN), (u32 *)PMU_C1_CAPMP_IDLE_CFG1);
-	writel(readl((u32 *)PMU_C1_CAPMP_IDLE_CFG2) | (1 << L2_HARDWARE_CACHE_FLUSH_EN), (u32 *)PMU_C1_CAPMP_IDLE_CFG2);
-	writel(readl((u32 *)PMU_C1_CAPMP_IDLE_CFG3) | (1 << L2_HARDWARE_CACHE_FLUSH_EN), (u32 *)PMU_C1_CAPMP_IDLE_CFG3);
+	/* writel(readl((u32 *)PMU_C1_CAPMP_IDLE_CFG0) | (1 << L2_HARDWARE_CACHE_FLUSH_EN), (u32 *)PMU_C1_CAPMP_IDLE_CFG0); */
+	/* writel(readl((u32 *)PMU_C1_CAPMP_IDLE_CFG1) | (1 << L2_HARDWARE_CACHE_FLUSH_EN), (u32 *)PMU_C1_CAPMP_IDLE_CFG1); */
+	/* writel(readl((u32 *)PMU_C1_CAPMP_IDLE_CFG2) | (1 << L2_HARDWARE_CACHE_FLUSH_EN), (u32 *)PMU_C1_CAPMP_IDLE_CFG2); */
+	/* writel(readl((u32 *)PMU_C1_CAPMP_IDLE_CFG3) | (1 << L2_HARDWARE_CACHE_FLUSH_EN), (u32 *)PMU_C1_CAPMP_IDLE_CFG3); */
 #endif
 
 	// hart0 is already boot up
@@ -188,7 +188,8 @@ static int spacemit_hart_start(unsigned int hartid, unsigned long saddr)
 static int spacemit_hart_stop(void)
 {
 	psci_cpu_off();
-	return 0;
+
+	return SBI_ENOTSUPP;
 }
 
 static int spacemit_hart_suspend(unsigned int suspend_type)
