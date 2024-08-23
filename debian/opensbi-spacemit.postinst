@@ -31,9 +31,9 @@ configure)
             OPENSBI_SEEK=0
             ;;
         "/dev/nvme0n1"*)
-            OPENSBI=/dev/mtdblock4
+            OPENSBI=/dev/mtdblock0
             # 以KB为单位
-            OPENSBI_SEEK=0
+            OPENSBI_SEEK=448
             ;;
         *)
             echo "Unsupported root=$ROOT"
