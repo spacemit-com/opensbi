@@ -35,13 +35,16 @@ configure)
             OPENSBI_SEEK=0
             ;;
         "/dev/nvme0n1"*)
-            if [ ! -e "/dev/mtdblock4" ]; then
+            if [ -e "/dev/mtdblock4" ]; then
+                OPENSBI=/dev/mtdblock4
+                # 以KB为单位
+                OPENSBI_SEEK=0
+            elif [ -e "/dev/mtdblock0" ]; then
                 OPENSBI=/dev/mtdblock0
                 # 以KB为单位
                 OPENSBI_SEEK=448
             else
-                OPENSBI=/dev/mtdblock4
-                # 以KB为单位
+                OPENSBI=/dev/mmcblk2p3
                 OPENSBI_SEEK=0
             fi
             ;;
