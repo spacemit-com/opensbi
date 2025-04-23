@@ -377,6 +377,44 @@ void spacemit_wait_core_enter_c2(u_register_t mpidr)
 	}
 }
 
+void spacemit_wait_core_enter_wfi(u_register_t mpidr)
+{
+	unsigned int value;
+
+	while (1) {
+		/* wait the cpu enter c2 */
+		value = readl((unsigned int *)0xd4282890);
+
+		if (mpidr == 0) {
+			if (value & (1 << 4))
+				return;
+		} else if (mpidr == 1) {
+			if (value & (1 << 7))
+				return;
+		} else if (mpidr == 2) {
+			if (value & (1 << 10))
+				return;
+		} else if (mpidr == 3) {
+			if (value & (1 << 13))
+				return;
+		} else if (mpidr == 4) {
+			if (value & (1 << 20))
+				return;
+		} else if (mpidr == 5) {
+			if (value & (1 << 23))
+				return;
+		} else if (mpidr == 6) {
+			if (value & (1 << 26))
+				return;
+		} else if (mpidr == 7) {
+			if (value & (1 << 29))
+				return;
+		} else {
+			;
+		}
+	}
+}
+
 void spacemit_assert_cpu(u_register_t mpidr)
 {
 	unsigned int target_cpu_idx;

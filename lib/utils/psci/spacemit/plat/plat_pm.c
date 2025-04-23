@@ -104,11 +104,12 @@ static void spacemit_pwr_domain_off(const psci_power_state_t *target_state)
 {
 	unsigned int hartid = current_hartid();
 
+#if 0
 	if (CLUSTER_PWR_STATE(target_state) == PLAT_MAX_OFF_STATE) {
 		/* power-off cluster */
 		spacemit_cluster_off(hartid);
         }
-
+#endif
 	if (SYSTEM_PWR_STATE(target_state) == ARM_LOCAL_STATE_OFF) {
 		/* D1P */
 		spacemit_top_off(hartid);
@@ -251,13 +252,15 @@ static void spacemit_pwr_domain_suspend(const psci_power_state_t *target_state)
 		csr_write(CSR_TCMCFG, 0);
 #endif
 		if (!spacemit_cluster_enter_m2(PLATFORM_MAX_CPUS_PER_CLUSTER)) {
+
+			/* wait other cpu enter wfi */
+			for (u32 i = 0; i < PLATFORM_MAX_CPUS_PER_CLUSTER * PLATFORM_CLUSTER_COUNT; i++) {
+				if (i != hartid) {
+					spacemit_wait_core_enter_wfi(i);
+				}
+			}
+
 			wake_idle_harts(NULL, hartid);
-
-			csi_flush_l2_cache_hart(0, 0);
-			csi_flush_l2_cache_hart(0, PLATFORM_MAX_CPUS_PER_CLUSTER);
-
-			cci_disable_snoop_dvm_reqs(0);
-			cci_disable_snoop_dvm_reqs(1);
 
 			/* assert othter cpu & wait other cpu enter c2 */
 			for (u32 i = 0; i < PLATFORM_MAX_CPUS_PER_CLUSTER * PLATFORM_CLUSTER_COUNT; i++) {
@@ -265,6 +268,15 @@ static void spacemit_pwr_domain_suspend(const psci_power_state_t *target_state)
 					spacemit_wait_core_enter_c2(i);
 				}
 			}
+
+			csi_flush_l2_cache_hart(0, 0);
+			csi_flush_l2_cache_hart(0, PLATFORM_MAX_CPUS_PER_CLUSTER);
+
+			cci_disable_snoop_dvm_reqs(0);
+			cci_disable_snoop_dvm_reqs(1);
+
+			spacemit_cluster_off(4);
+
 		} else {
 			csi_flush_l2_cache_hart(0, 0);
 			cci_disable_snoop_dvm_reqs(0);
