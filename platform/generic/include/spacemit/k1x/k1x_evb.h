@@ -64,6 +64,9 @@
 
 #define L2_HARDWARE_CACHE_FLUSH_EN	(13)
 
+#define REGISTER_PRESERVATION_BASE	(0xD4282000)
+#define REGISTER_PRESERVATION_SIZE	(4096)
+
 /***************************mailbox***************************/
 #define SCMI_MAILBOX_SHARE_MEM		(0x2f902080)
 #define PLAT_MAILBOX_REG_BASE		(0x2f824000)
