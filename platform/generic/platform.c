@@ -197,6 +197,24 @@ static int generic_vendor_ext_provider(long funcid,
 						 generic_plat_match);
 }
 
+static int generic_emulate_load(int rlen, unsigned long addr,
+				union sbi_ldst_data *out_val)
+{
+	if (generic_plat && generic_plat->emulate_load)
+		return generic_plat->emulate_load(rlen, addr, out_val,
+						  generic_plat_match);
+	return SBI_ENODEV;
+}
+
+static int generic_emulate_store(int wlen, unsigned long addr,
+				 union sbi_ldst_data in_val)
+{
+	if (generic_plat && generic_plat->emulate_store)
+		return generic_plat->emulate_store(wlen, addr, in_val,
+						   generic_plat_match);
+	return SBI_ENODEV;
+}
+
 static void generic_early_exit(void)
 {
 	if (generic_plat && generic_plat->early_exit)
@@ -303,6 +321,8 @@ const struct sbi_platform_operations platform_ops = {
 	.timer_exit		= fdt_timer_exit,
 	.vendor_ext_check	= generic_vendor_ext_check,
 	.vendor_ext_provider	= generic_vendor_ext_provider,
+	.emulate_load		= generic_emulate_load,
+	.emulate_store		= generic_emulate_store,
 };
 
 struct sbi_platform platform = {

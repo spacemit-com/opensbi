@@ -45,6 +45,7 @@
 #ifndef __ASSEMBLER__
 
 #include <sbi/sbi_ecall_interface.h>
+#include <sbi/sbi_emulate_ldst.h>
 #include <sbi/sbi_error.h>
 #include <sbi/sbi_scratch.h>
 #include <sbi/sbi_version.h>
@@ -137,6 +138,12 @@ struct sbi_platform_operations {
 				   const struct sbi_trap_regs *regs,
 				   unsigned long *out_value,
 				   struct sbi_trap_info *out_trap);
+	/** Emulate a load access fault from S/U-mode */
+	int (*emulate_load)(int rlen, unsigned long addr,
+			    union sbi_ldst_data *out_val);
+	/** Emulate a store access fault from S/U-mode */
+	int (*emulate_store)(int wlen, unsigned long addr,
+			     union sbi_ldst_data in_val);
 };
 
 /** Platform default per-HART stack size for exception/interrupt handling */
@@ -689,6 +696,24 @@ static inline int sbi_platform_vendor_ext_provider(
 	}
 
 	return SBI_ENOTSUPP;
+}
+
+static inline int sbi_platform_emulate_load(const struct sbi_platform *plat,
+					    int rlen, unsigned long addr,
+					    union sbi_ldst_data *out_val)
+{
+	if (plat && sbi_platform_ops(plat)->emulate_load)
+		return sbi_platform_ops(plat)->emulate_load(rlen, addr, out_val);
+	return SBI_ENODEV;
+}
+
+static inline int sbi_platform_emulate_store(const struct sbi_platform *plat,
+					     int wlen, unsigned long addr,
+					     union sbi_ldst_data in_val)
+{
+	if (plat && sbi_platform_ops(plat)->emulate_store)
+		return sbi_platform_ops(plat)->emulate_store(wlen, addr, in_val);
+	return SBI_ENODEV;
 }
 
 #endif
