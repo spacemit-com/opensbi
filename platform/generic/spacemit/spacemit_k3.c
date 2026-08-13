@@ -343,6 +343,16 @@ static int spacemit_k3_emulate_load(int rlen, unsigned long addr,
 	if (pa_is_m_only(pa, rlen))
 		return SBI_ENODEV;
 
+	/*
+	 * Serialize the emulated MMIO access against any prior/next access.
+	 * OpenSBI's readl()/writel() only emit "fence i,r" / "fence w,o", which
+	 * do NOT order device-read before device-read (or device-write before
+	 * device-read). The Spacemit PMU/APMU bus stalls on back-to-back
+	 * unsynchronized M-mode reads (as issued by the kernel CCU driver's
+	 * recalc_rate loop), so add a full I/O barrier on both sides of each
+	 * emulated access.
+	 */
+	mb();
 	switch (rlen) {
 	case 1: out_val->data_bytes[0] = readb((volatile void *)pa); break;
 	case 2: out_val->data_u32 = readw((volatile void *)pa); break;
@@ -350,6 +360,7 @@ static int spacemit_k3_emulate_load(int rlen, unsigned long addr,
 	case 8: out_val->data_u64 = readq((volatile void *)pa); break;
 	default: return SBI_EINVAL;
 	}
+	mb();
 	return 0;
 }
 
@@ -367,6 +378,8 @@ static int spacemit_k3_emulate_store(int wlen, unsigned long addr,
 	if (pa_is_m_only(pa, wlen))
 		return SBI_ENODEV;
 
+	/* See comment in spacemit_k3_emulate_load(): full I/O barrier. */
+	mb();
 	switch (wlen) {
 	case 1: writeb(in_val.data_bytes[0], (volatile void *)pa); break;
 	case 2: writew(in_val.data_u32, (volatile void *)pa); break;
@@ -374,6 +387,7 @@ static int spacemit_k3_emulate_store(int wlen, unsigned long addr,
 	case 8: writeq(in_val.data_u64, (volatile void *)pa); break;
 	default: return SBI_EINVAL;
 	}
+	mb();
 	return 0;
 }
 
