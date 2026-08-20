@@ -13,6 +13,7 @@
 #include <sbi/sbi_hart.h>
 #include <sbi/sbi_types.h>
 #include <sbi/sbi_trap.h>
+#include <sbi/sbi_emulate_ldst.h>
 
 struct platform_override {
 	const struct fdt_match *match_table;
@@ -32,6 +33,12 @@ struct platform_override {
 				   unsigned long *out_value,
 				   struct sbi_trap_info *out_trap,
 				   const struct fdt_match *match);
+	int (*emulate_load)(int rlen, unsigned long addr,
+			    union sbi_ldst_data *out_val,
+			    const struct fdt_match *match);
+	int (*emulate_store)(int wlen, unsigned long addr,
+			     union sbi_ldst_data in_val,
+			     const struct fdt_match *match);
 };
 
 #endif

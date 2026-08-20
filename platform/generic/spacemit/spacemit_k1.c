@@ -27,8 +27,12 @@
 #include <sbi_utils/psci/plat/arm/common/plat_arm.h>
 #include <sbi_utils/psci/plat/common/platform.h>
 #include <spacemit/spacemit_config.h>
+#include <sbi/sbi_domain.h>
+#include <sbi/sbi_console.h>
 
 extern struct sbi_platform platform;
+
+#define LOWER_32_BITS		0xffffffffUL
 
 /* reserved for future use */
 /* extern unsigned long __plic_regsave_offset_ptr; */
@@ -45,11 +49,11 @@ static void wakeup_other_core(void)
 
 #if defined(CONFIG_PLATFORM_SPACEMIT_K1X)
 	/* set other cpu's boot-entry */
-	writel(scratch->warmboot_addr & 0xffffffff, (u32 *)C0_RVBADDR_LO_ADDR);
-	writel((scratch->warmboot_addr >> 32) & 0xffffffff, (u32 *)C0_RVBADDR_HI_ADDR);
+	writel(scratch->warmboot_addr & LOWER_32_BITS, (u32 *)C0_RVBADDR_LO_ADDR);
+	writel((scratch->warmboot_addr >> 32) & LOWER_32_BITS, (u32 *)C0_RVBADDR_HI_ADDR);
 
-	writel(scratch->warmboot_addr & 0xffffffff, (u32 *)C1_RVBADDR_LO_ADDR);
-	writel((scratch->warmboot_addr >> 32) & 0xffffffff, (u32 *)C1_RVBADDR_HI_ADDR);
+	writel(scratch->warmboot_addr & LOWER_32_BITS, (u32 *)C1_RVBADDR_LO_ADDR);
+	writel((scratch->warmboot_addr >> 32) & LOWER_32_BITS, (u32 *)C1_RVBADDR_HI_ADDR);
 
 #elif defined(CONFIG_PLATFORM_SPACEMIT_K1PRO)
 	for (i = 0; i < platform.hart_count; i++) {
@@ -58,8 +62,8 @@ static void wakeup_other_core(void)
 	unsigned long core_index = MPIDR_AFFLVL1_VAL(hartid) * PLATFORM_MAX_CPUS_PER_CLUSTER
 			+ MPIDR_AFFLVL0_VAL(hartid);
 
-	writel(scratch->warmboot_addr & 0xffffffff, (u32 *)(CORE0_RVBADDR_LO_ADDR + core_index * CORE_RVBADDR_STEP));
-	writel((scratch->warmboot_addr >> 32) & 0xffffffff, (u32 *)(CORE0_RVBADDR_HI_ADDR + core_index * CORE_RVBADDR_STEP));
+	writel(scratch->warmboot_addr & LOWER_32_BITS, (u32 *)(CORE0_RVBADDR_LO_ADDR + core_index * CORE_RVBADDR_STEP));
+	writel((scratch->warmboot_addr >> 32) & LOWER_32_BITS, (u32 *)(CORE0_RVBADDR_HI_ADDR + core_index * CORE_RVBADDR_STEP));
 	}
 #endif
 
@@ -87,8 +91,8 @@ static void wakeup_other_core(void)
 		clusterid = MPIDR_AFFLVL1_VAL(hartid);
 
 		/* we only enable snoop of cluster0 */
-		if (0 == (cluster_enabled & (1 << clusterid))) {
-			cluster_enabled |= 1 << clusterid;
+		if (0 == (cluster_enabled & BIT(clusterid))) {
+			cluster_enabled |= BIT(clusterid);
 			if (cur_clusterid == clusterid) {
 				cci_enable_snoop_dvm_reqs(clusterid);
 			}
@@ -166,6 +170,13 @@ static int spacemit_k1_early_init(bool cold_boot, const struct fdt_match *match)
 		/* initialize */
 #ifdef CONFIG_ARM_SCMI_PROTOCOL_SUPPORT
 		plat_arm_pwrc_setup();
+#endif
+#if defined(CONFIG_PLATFORM_SPACEMIT_K1X)
+		int rc = sbi_domain_root_add_memrange(REGISTER_PRESERVATION_BASE,
+						      REGISTER_PRESERVATION_SIZE, PAGE_SIZE,
+						      SBI_DOMAIN_MEMREGION_M_RWX);
+		if (rc)
+			return rc;
 #endif
 	} else {
 #ifdef CONFIG_ARM_PSCI_SUPPORT
@@ -285,9 +296,131 @@ static const struct fdt_match spacemit_k1_match[] = {
 	{ },
 };
 
+#if defined(CONFIG_PLATFORM_SPACEMIT_K1X)
+
+/* SV39 page table constants */
+#define SATP64_MODE_SHIFT	60
+#define SV39_VPN_BITS		9
+#define SV39_VPN_MASK		0x1ffUL
+#define SV39_LEVELS		3
+#define SV39_VPN_SHIFT(lvl)	(PAGE_SHIFT + SV39_VPN_BITS * (lvl))
+#define PTE_SIZE		8
+#define PTE_V_BIT		BIT(0)
+#define PTE_RWX_MASK		0xeUL
+#define PTE_PPN_SHIFT		10
+
+static unsigned long s_addr_to_pa(unsigned long addr)
+{
+	unsigned long satp = csr_read(CSR_SATP);
+	unsigned long mode = (satp & SATP64_MODE) >> SATP64_MODE_SHIFT;
+
+	if (mode == SATP_MODE_OFF)
+		return addr;
+
+	if (mode != SATP_MODE_SV39)
+		return 0;
+
+	unsigned long ppn = satp & SATP64_PPN;
+	unsigned long vpn[SV39_LEVELS] = {
+		(addr >> SV39_VPN_SHIFT(2)) & SV39_VPN_MASK,
+		(addr >> SV39_VPN_SHIFT(1)) & SV39_VPN_MASK,
+		(addr >> SV39_VPN_SHIFT(0)) & SV39_VPN_MASK,
+	};
+
+	for (int i = 0; i < SV39_LEVELS; i++) {
+		unsigned long *ptep = (unsigned long *)((ppn << PAGE_SHIFT) + vpn[i] * PTE_SIZE);
+		unsigned long pte = *ptep;
+
+		if (!(pte & PTE_V_BIT))
+			return 0;
+
+		ppn = (pte >> PTE_PPN_SHIFT) & SATP64_PPN;
+
+		if (pte & PTE_RWX_MASK) {
+			unsigned long pg_off_bits = PAGE_SHIFT + SV39_VPN_BITS * (2 - i);
+			unsigned long offset_mask = BIT(pg_off_bits) - 1;
+			return (ppn << PAGE_SHIFT) | (addr & offset_mask);
+		}
+	}
+	return 0;
+}
+
+struct addr_range { unsigned long base, size; };
+
+static const struct addr_range m_only_ranges[] = {
+	{ PMU_C0_CAPMP_IDLE_CFG1,  sizeof(u32) },
+	{ PMU_C0_CAPMP_IDLE_CFG0,  3 * sizeof(u32) },	/* PMU_C0_CAPMP_IDLE_CFG0, PMU_CAP_CORE0/1_IDLE_CFG */
+	{ PMU_C0_CAPMP_IDLE_CFG2,  2 * sizeof(u32) },
+	{ PMU_CAP_CORE2_IDLE_CFG,  2 * sizeof(u32) },
+	{ PMU_CAP_CORE4_IDLE_CFG,  8 * sizeof(u32) },	/* PMU_CAP_CORE4-7_IDLE_CFG, PMU_C1_CAPMP_IDLE_CFG0-3 */
+	{ C0_RVBADDR_LO_ADDR, 2 * sizeof(u32) },
+	{ C1_RVBADDR_LO_ADDR, 2 * sizeof(u32) },
+};
+
+static bool pa_is_m_only(unsigned long pa, int len)
+{
+	for (int i = 0; i < array_size(m_only_ranges); i++) {
+		if (pa >= m_only_ranges[i].base &&
+		    pa + len <= m_only_ranges[i].base + m_only_ranges[i].size)
+			return true;
+	}
+	return false;
+}
+
+static int spacemit_k1_emulate_load(int rlen, unsigned long addr,
+				    union sbi_ldst_data *out_val,
+				    const struct fdt_match *match)
+{
+	unsigned long pa = s_addr_to_pa(addr);
+
+	if (!pa || pa < REGISTER_PRESERVATION_BASE ||
+	    pa + rlen > REGISTER_PRESERVATION_BASE + REGISTER_PRESERVATION_SIZE)
+		return SBI_ENODEV;
+
+	if (pa_is_m_only(pa, rlen))
+		return SBI_ENODEV;
+
+	switch (rlen) {
+	case 1: out_val->data_bytes[0] = readb((volatile void *)pa); break;
+	case 2: out_val->data_u32 = readw((volatile void *)pa); break;
+	case 4: out_val->data_u32 = readl((volatile void *)pa); break;
+	case 8: out_val->data_u64 = readq((volatile void *)pa); break;
+	default: return SBI_EINVAL;
+	}
+	return 0;
+}
+
+static int spacemit_k1_emulate_store(int wlen, unsigned long addr,
+				     union sbi_ldst_data in_val,
+				     const struct fdt_match *match)
+{
+	unsigned long pa = s_addr_to_pa(addr);
+
+	if (!pa || pa < REGISTER_PRESERVATION_BASE ||
+	    pa + wlen > REGISTER_PRESERVATION_BASE + REGISTER_PRESERVATION_SIZE)
+		return SBI_ENODEV;
+
+	if (pa_is_m_only(pa, wlen))
+		return SBI_ENODEV;
+
+	switch (wlen) {
+	case 1: writeb(in_val.data_bytes[0], (volatile void *)pa); break;
+	case 2: writew(in_val.data_u32, (volatile void *)pa); break;
+	case 4: writel(in_val.data_u32, (volatile void *)pa); break;
+	case 8: writeq(in_val.data_u64, (volatile void *)pa); break;
+	default: return SBI_EINVAL;
+	}
+	return 0;
+}
+#endif /* CONFIG_PLATFORM_SPACEMIT_K1X */
+
 const struct platform_override spacemit_k1 = {
 	.match_table = spacemit_k1_match,
 	.early_init = spacemit_k1_early_init,
 	.final_init = spacemit_k1_final_init,
 	.cold_boot_allowed = spacemit_cold_boot_allowed,
+#if defined(CONFIG_PLATFORM_SPACEMIT_K1X)
+	.emulate_load = spacemit_k1_emulate_load,
+	.emulate_store = spacemit_k1_emulate_store,
+#endif
 };

@@ -18,6 +18,7 @@
 #include <sbi/sbi_ipi.h>
 #include <sbi/sbi_irqchip.h>
 #include <sbi/sbi_misaligned_ldst.h>
+#include <sbi/sbi_emulate_ldst.h>
 #include <sbi/sbi_pmu.h>
 #include <sbi/sbi_scratch.h>
 #include <sbi/sbi_timer.h>
@@ -305,10 +306,19 @@ struct sbi_trap_regs *sbi_trap_handler(struct sbi_trap_regs *regs)
 		msg = "ecall handler failed";
 		break;
 	case CAUSE_LOAD_ACCESS:
+		sbi_pmu_ctr_incr_fw(SBI_PMU_FW_ACCESS_LOAD);
+		rc = sbi_emulate_load_handler(mtval, mtval2, mtinst, regs);
+		if (!rc)
+			return regs;
+		msg = "load access fault emulation failed";
+		break;
 	case CAUSE_STORE_ACCESS:
-		sbi_pmu_ctr_incr_fw(mcause == CAUSE_LOAD_ACCESS ?
-			SBI_PMU_FW_ACCESS_LOAD : SBI_PMU_FW_ACCESS_STORE);
-		/* fallthrough */
+		sbi_pmu_ctr_incr_fw(SBI_PMU_FW_ACCESS_STORE);
+		rc = sbi_emulate_store_handler(mtval, mtval2, mtinst, regs);
+		if (!rc)
+			return regs;
+		msg = "store access fault emulation failed";
+		break;
 	default:
 		/* If the trap came from S or U mode, redirect it there */
 		trap.epc = regs->mepc;
