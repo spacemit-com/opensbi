@@ -17,13 +17,13 @@
 #define CSR_ML2HINT 0x7F7
 
 /* [1]Disbale read and prefetch transaction merge */
-#define CIU_CHR2_MER_DIS		(_UL(1) << 2)
+#define CIU_MER_DIS		(_UL(1) << 2)
 
 /* [3]Disable full address dependency check */
-#define CIU_CHR2_DEPD_DIS		(_UL(1) << 3)
+#define CIU_DEPD_DIS		(_UL(1) << 3)
 
 /* [4]Disable the behavior of snb discarding prefetch when reaching a certain load */
-#define CIU_PRF_THROT_DIS		(_UL(1) << 4)
+#define CIU_PRF_THROT_DIS	(_UL(1) << 4)
 
 #define CSR_PERF_CTRL 0x7D0
 
@@ -37,6 +37,11 @@
 
 /*[26]  icg cell */
 #define TRACE_TOP_ICGEN		(_UL(1) << 26)
+
+#define CSR_MVMD1	0xBF9
+
+/* [37] Disable ifu fusion type5 */
+#define IFU_FUSION_TYPE5_DIS	(_UL(1) << 37)
 
 #define CACHE_LINE_SIZE		(64)
 #define CACHE_INV_ADDR_Msk	(0xffffffffffffffff << 6)

@@ -55,8 +55,8 @@ void boot_entry_dummy(unsigned long sc)
 	/* Increase the L2 prefetch distance to 56 entries */
 	csr_set(CSR_PREFETCH_CTRL, L2_PERF_DIST);
 	/* Turn off full address correlation check to improve L2 performance */
-	csr_clear(CSR_ML2HINT, CIU_CHR2_DEPD_DIS);
-	csr_set(CSR_ML2HINT, CIU_CHR2_MER_DIS);
+	csr_clear(CSR_ML2HINT, CIU_DEPD_DIS);
+	csr_set(CSR_ML2HINT, CIU_MER_DIS);
 
 	/* devote early */
 	spacemit_devote_pwrdown_cluster(current_hartid());
@@ -220,13 +220,17 @@ static bool spacemit_k3_cold_boot_allowed(u32 hartid, const struct fdt_match *ma
 	csr_set(CSR_ML2SETUP, 1 << (hartid % PLATFORM_MAX_CPUS_PER_CLUSTER) | IPRF | TPRF);
 
 	if (hartid >= 8) {
-		/* set the vector load instructions to bypass L1 cache,only cached in the L2 cache */
+		/* Set the vector load instructions to bypass L1 cache,only cached in the L2 cache */
 		csr_set(CSR_PERF_CTRL, VEC_L1BYPASS);
 		/* Increase the L2 prefetch distance to 56 entries */
 		csr_set(CSR_PREFETCH_CTRL, L2_PERF_DIST);
 		/* Turn off full address correlation check to improve L2 performance */
-		csr_clear(CSR_ML2HINT, CIU_CHR2_DEPD_DIS);
-		csr_set(CSR_ML2HINT, CIU_CHR2_MER_DIS);
+		csr_clear(CSR_ML2HINT, CIU_DEPD_DIS);
+		/* Disbale read and prefetch transaction merge */
+		csr_set(CSR_ML2HINT, CIU_MER_DIS);
+	} else {
+		/* Disable ifu fusion type5 */
+		csr_set(CSR_MVMD1, IFU_FUSION_TYPE5_DIS);
 	}
 
 	/* enable the rvtrace clk by default */
