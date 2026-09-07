@@ -50,6 +50,11 @@ extern void _start_warm_dummy(unsigned long);
 
 void boot_entry_dummy(unsigned long sc)
 {
+	unsigned int hartid = current_hartid();
+	/* Only hart8 (C2) and hart12 (C3) enter the dummy path. */
+	unsigned long boot_addr = hartid == 8 ? C2_RVBADDR_LO_ADDR :
+					      C3_RVBADDR_LO_ADDR;
+
 	/* set the vector load instructions to bypass L1 cache,only cached in the L2 cache */
 	csr_set(CSR_PERF_CTRL, VEC_L1BYPASS);
 	/* Increase the L2 prefetch distance to 56 entries */
@@ -64,11 +69,11 @@ void boot_entry_dummy(unsigned long sc)
 	/* de-vote core acpr */
 	spacemit_devote_core_apcr(current_hartid());
 
-	/* re-set the bootentry of cluster2 */
-	writel((unsigned long)_start_warm & 0xffffffff, (unsigned int *)(C2_RVBADDR_LO_ADDR));
-	writel((((unsigned long)_start_warm) >> 32) & 0xffffffff, (unsigned int*)(C2_RVBADDR_HI_ADDR));
+	/* Restore the normal warm-boot entry for this cluster. */
+	writel((unsigned long)_start_warm & 0xffffffff, (void *)boot_addr);
+	writel((unsigned long)_start_warm >> 32, (void *)(boot_addr + 4));
 
-	spacemit_vote_powrdown_core(8);
+	spacemit_vote_powrdown_core(hartid);
 
 	/* disable local timer */
 	csr_write(CSR_STIMECMP, 0xffffffffffffffff);
@@ -160,10 +165,16 @@ static int spacemit_k3_early_init(bool cold_boot, const void *fdt, const struct 
 			/* devote the cluster */
 			spacemit_devote_pwrdown_cluster(i);
 
-		/* then wakeup core8 which belongs cluster2 */
+		/* Pre-warm C2/C3 so their CPU clock switches can complete. */
 		writel(((unsigned long)_start_warm_dummy) & 0xffffffff, (unsigned int *)(C2_RVBADDR_LO_ADDR));
 		writel((((unsigned long)_start_warm_dummy) >> 32) & 0xffffffff, (unsigned int*)(C2_RVBADDR_HI_ADDR));
 		writel((1 << 8), (unsigned int *)PMU_CAP_CORE8_WAKEUP);
+
+		writel((unsigned long)_start_warm_dummy & 0xffffffff,
+		       (void *)C3_RVBADDR_LO_ADDR);
+		writel((unsigned long)_start_warm_dummy >> 32,
+		       (void *)C3_RVBADDR_HI_ADDR);
+		writel(1 << 12, (void *)PMU_CAP_CORE12_WAKEUP);
 
 		/* deassert dmasys reset for cpus reach all tcm range */
 		writel(1, (unsigned int *)DMASYS_RESET);
