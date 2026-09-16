@@ -2,13 +2,9 @@
 
 export ARCH=riscv
 
-# Only set CROSS_COMPILE when cross-compiling
-DEB_HOST_ARCH ?= $(shell dpkg-architecture -qDEB_HOST_ARCH)
-DEB_BUILD_ARCH ?= $(shell dpkg-architecture -qDEB_BUILD_ARCH)
-
-ifneq ($(DEB_HOST_ARCH),$(DEB_BUILD_ARCH))
-export CROSS_COMPILE=riscv64-unknown-linux-gnu-
-endif
+# This package only targets RISC-V, so default to the standard Debian/Ubuntu
+# cross prefix, which is also correct for native builds.
+export CROSS_COMPILE ?= riscv64-linux-gnu-
 
 # Enable verbose build by default, disable when terse is specified.
 ifeq (,$(filter terse,$(DEB_BUILD_OPTIONS)))

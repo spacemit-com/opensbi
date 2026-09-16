@@ -24,10 +24,18 @@ running_in_chroot() {
 case "$1" in
 configure)
     target=""
-    if grep -q 'Spacemit(R) X100' /proc/cpuinfo; then
+    # Detect a Spacemit K3 / X100 platform.  Different kernels expose the SoC
+    # identity differently, so accept any of:
+    #   - "Spacemit(R) X100" model string in /proc/cpuinfo (BSP kernels)
+    #   - "spacemit,x100" uarch line in /proc/cpuinfo (mainline kernels)
+    #   - "spacemit,k3" in /proc/device-tree/compatible (device tree)
+    if grep -q 'Spacemit(R) X100' /proc/cpuinfo \
+        || grep -q 'spacemit,x100' /proc/cpuinfo \
+        || { [ -r /proc/device-tree/compatible ] &&
+             grep -qa 'spacemit,k3' /proc/device-tree/compatible; }; then
         target="spacemit"
     else
-        echo "Running not in Spacemit X100, skipping install opensbi to bootloader partition."
+        echo "Running not in Spacemit K3/X100, skipping install opensbi to bootloader partition."
         exit 0
     fi
 
@@ -35,6 +43,11 @@ configure)
         echo "Running in chroot, skipping install opensbi to bootloader partition."
         exit 0
     fi
+
+    # Ensure mtdblock is loaded.  It is built-in on SpacemiT kernels but ships
+    # as a module on mainline kernels (e.g. Ubuntu), where /dev/mtdblock*
+    # won't exist until the module is loaded.
+    modprobe mtdblock 2>/dev/null || true
 
     BOOT_MODE=""
     for x in $(cat /proc/cmdline); do
@@ -245,6 +258,11 @@ configure)
     done
 
     # 此前已经做了所有检查
+    if [ ! -b "$OPENSBI" ]; then
+        echo "Error: $OPENSBI is not a block device (mtdblock not available in this kernel?)"
+        exit 0
+    fi
+
     set -x
     dd if=$OPENSBI_ITB of=$OPENSBI seek=$OPENSBI_SEEK bs=1K && sync
     set +x
