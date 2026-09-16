@@ -14,8 +14,7 @@ Homepage: https://github.com/riscv-software-src/opensbi
 XBS-Commit-Id: ${misc:CommitId}
 
 Package: opensbi-spacemit
-Architecture: all
-Multi-Arch: foreign
+Architecture: riscv64
 Depends:
  ${misc:Depends},
  ${shlibs:Depends},
